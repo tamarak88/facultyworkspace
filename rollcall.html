@@ -1,0 +1,2915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RollCall</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --primary-light: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #16a34a;
+            --success-bg: #dcfce7;
+            --warning: #d97706;
+            --warning-bg: #fef3c7;
+            --danger: #dc2626;
+            --danger-bg: #fee2e2;
+            --bg: #f0f4f8;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        #app {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .header-actions { display: flex; gap: 8px; }
+
+        /* License footer */
+        .license-footer {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            padding: 8px 16px;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            background: rgba(255,255,255,0.9);
+            border-left: 1px solid var(--border);
+            border-top: 1px solid var(--border);
+        }
+        .license-footer a {
+            color: var(--primary-light);
+            text-decoration: none;
+            margin-left: 8px;
+        }
+        .license-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: var(--primary-light); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-outline {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover { background: #f8fafc; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Gender toggle */
+        .gender-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+            margin-top: 4px;
+        }
+        .gender-btn {
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.15s;
+        }
+        .gender-btn:first-child { border-radius: 4px 0 0 4px; }
+        .gender-btn:last-child { border-radius: 0 4px 4px 0; }
+        .gender-btn.active-female { background: #fce7f3; color: #be185d; border-color: #f9a8d4; }
+        .gender-btn.active-male { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+        .gender-btn.active-nonbinary { background: #f3e8ff; color: #7c3aed; border-color: #c4b5fd; }
+
+        /* Pronouns display */
+        .pronouns-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-style: italic;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 32px;
+        }
+
+        /* License activation screen */
+        .license-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ff 100%);
+        }
+        .license-card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            padding: 48px 40px;
+            max-width: 480px;
+            width: 90%;
+        }
+        .license-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .license-hero-img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+        }
+        .license-header h1 {
+            font-size: 2.2rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .license-header p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+        .license-how-it-works {
+            margin-top: 16px;
+        }
+        .license-how-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--primary);
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .license-how-toggle:hover {
+            background: #f0f4ff;
+            border-color: var(--primary);
+        }
+        .license-how-toggle .arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.7rem;
+        }
+        .license-how-toggle.open .arrow {
+            transform: rotate(90deg);
+        }
+        .license-how-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+        .license-how-panel.open {
+            max-height: 600px;
+            opacity: 1;
+        }
+        .license-how-content {
+            margin-top: 14px;
+            text-align: left;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+        .license-how-content p {
+            margin: 0 0 8px;
+        }
+        .license-how-content p:last-child {
+            margin-bottom: 0;
+        }
+        .license-research {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .research-highlight {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #f0f5ff;
+            border-left: 3px solid var(--primary-light);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin-bottom: 8px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            color: var(--text);
+        }
+        .research-highlight .research-icon {
+            flex-shrink: 0;
+            font-size: 1rem;
+            margin-top: 1px;
+        }
+        .research-highlight sup {
+            font-size: 0.65rem;
+            color: var(--primary-light);
+            margin-left: 2px;
+        }
+        .license-footnotes {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 0.7rem;
+            color: var(--text-light);
+            line-height: 1.5;
+            text-align: left;
+        }
+        .license-footnotes p {
+            margin: 2px 0;
+        }
+        .license-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        .form-group input,
+        .form-group select {
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary-light);
+        }
+        .radio-group {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 400;
+            cursor: pointer;
+            margin: 0;
+        }
+        .radio-group input[type="radio"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        .year-selector {
+            display: none;
+        }
+        .year-selector.visible {
+            display: flex;
+        }
+        .license-error {
+            background: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+        }
+        .license-success {
+            background: var(--success-bg);
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+        }
+        .activate-btn {
+            margin-top: 8px;
+        }
+
+        /* Upload Screen */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary-light);
+            background: #f0f5ff;
+        }
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        .upload-area h2 {
+            font-size: 1.25rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        .upload-area p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        .upload-input { display: none; }
+
+        /* Processing Screen */
+        .processing {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary-light);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .processing h2 { margin-bottom: 8px; }
+        .processing p { color: var(--text-light); }
+
+        /* Review Screen */
+        .review-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .review-card {
+            background: var(--card);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            position: relative;
+            transition: all 0.2s;
+        }
+        .review-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .review-card img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            display: block;
+            background: #e2e8f0;
+        }
+        .review-card .name {
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        .review-card .remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .review-card:hover .remove-btn { opacity: 1; }
+
+        /* Quiz Screen */
+        .quiz-container { text-align: center; }
+        .quiz-photo-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .quiz-photo {
+            width: 260px;
+            height: 260px;
+            object-fit: cover;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .quiz-mode-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .badge-mc { background: #dbeafe; color: #1e40af; }
+        .badge-fr { background: #fef3c7; color: #92400e; }
+
+        /* Multiple Choice */
+        .mc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        .mc-option {
+            padding: 14px 20px;
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-weight: 500;
+        }
+        .mc-option:hover:not(:disabled) {
+            border-color: var(--primary-light);
+            background: #f0f5ff;
+        }
+        .mc-option.correct {
+            border-color: var(--success);
+            background: var(--success-bg);
+            color: var(--success);
+        }
+        .mc-option.incorrect {
+            border-color: var(--danger);
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+        .mc-option.show-correct {
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+        .mc-option:disabled { cursor: default; }
+
+        /* Free Response */
+        .fr-container {
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        .fr-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1.1rem;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .fr-input:focus { border-color: var(--primary-light); }
+        .fr-input.correct { border-color: var(--success); background: var(--success-bg); }
+        .fr-input.incorrect { border-color: var(--danger); background: var(--danger-bg); }
+        .fr-submit {
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        /* Feedback */
+        .feedback {
+            margin: 16px 0;
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            font-size: 1rem;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feedback-correct { background: var(--success-bg); color: var(--success); }
+        .feedback-incorrect { background: var(--danger-bg); color: var(--danger); }
+
+        /* Progress Stats */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        .stat-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .dot-learning { background: var(--danger); }
+        .dot-progress { background: var(--warning); }
+        .dot-mastered { background: var(--success); }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #22c55e);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .dashboard-card {
+            background: var(--card);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            text-align: center;
+            position: relative;
+        }
+        .dashboard-card img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            display: block;
+        }
+        .dashboard-card .info {
+            padding: 6px 8px;
+        }
+        .dashboard-card .name {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .status-learning { background: var(--danger-bg); color: var(--danger); }
+        .status-in_progress { background: var(--warning-bg); color: var(--warning); }
+        .status-mastered { background: var(--success-bg); color: var(--success); }
+
+        /* Summary stats at top of dashboard */
+        .summary-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .summary-stat {
+            text-align: center;
+            padding: 16px 24px;
+            background: var(--card);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            min-width: 100px;
+        }
+        .summary-stat .number {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .summary-stat .label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.3s ease; }
+
+        /* Completion celebration */
+        .celebration {
+            text-align: center;
+            padding: 40px;
+        }
+        .celebration h2 { font-size: 1.8rem; margin-bottom: 12px; color: var(--success); }
+        .celebration p { color: var(--text-light); margin-bottom: 20px; }
+
+        /* Quiz action buttons (promote / correct name) */
+        .quiz-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .btn-promote {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+        }
+        .btn-promote:hover { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+        .btn-correct-name {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-correct-name:hover { background: #f8fafc; }
+
+        /* Name correction modal */
+        .name-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+        .name-modal {
+            background: white;
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .name-modal h3 {
+            margin-bottom: 6px;
+            font-size: 1.1rem;
+        }
+        .name-modal p {
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+        .name-modal-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .name-modal-input:focus { border-color: var(--primary-light); }
+        .name-modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .mc-grid { grid-template-columns: 1fr; }
+            .quiz-photo { width: 200px; height: 200px; }
+            .review-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .summary-stats { flex-direction: column; align-items: center; }
+            .license-card { padding: 32px 24px; }
+        }
+
+        /* Error screen */
+        .error-box {
+            background: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            margin: 20px 0;
+            color: #991b1b;
+        }
+
+        /* Name edit input in review */
+        .name-edit-input {
+            width: 100%;
+            padding: 4px 8px;
+            border: 1px solid var(--primary-light);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            text-align: center;
+            outline: none;
+        }
+
+        /* Welcome Screen */
+        .welcome-hero {
+            text-align: center;
+            padding: 40px 20px 30px;
+        }
+        .welcome-hero h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .welcome-hero p {
+            color: var(--text-light);
+            font-size: 1.05rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .instructions-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+            padding: 8px 18px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--primary);
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .instructions-toggle:hover {
+            background: #f0f4ff;
+            border-color: var(--primary);
+        }
+        .instructions-toggle .arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.75rem;
+        }
+        .instructions-toggle.open .arrow {
+            transform: rotate(90deg);
+        }
+        .instructions-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+        .instructions-panel.open {
+            max-height: 600px;
+            opacity: 1;
+        }
+        .instructions-content {
+            max-width: 600px;
+            margin: 16px auto 0;
+            text-align: left;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            padding: 20px 24px;
+            font-size: 0.93rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+        .instructions-content p {
+            margin: 0 0 10px;
+        }
+        .instructions-content p:last-child {
+            margin-bottom: 0;
+        }
+        .welcome-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 28px 0;
+        }
+        .welcome-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+        }
+        .step-number {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .step-text h3 { font-size: 0.95rem; margin-bottom: 2px; }
+        .step-text p { font-size: 0.85rem; color: var(--text-light); }
+
+        /* Class name input */
+        .class-name-section {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f0f5ff;
+            border-radius: var(--radius-sm);
+            border: 1px solid #dbeafe;
+        }
+        .class-name-section label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+        .class-name-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .class-name-input:focus { border-color: var(--primary-light); }
+        .class-name-hint {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* Saved class cards */
+        .saved-class-card {
+            padding: 14px 16px;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.15s;
+        }
+        .saved-class-card:hover { border-color: var(--primary-light); background: #f0f5ff; }
+        .saved-class-info { display: flex; flex-direction: column; gap: 2px; }
+        .saved-class-name { font-weight: 600; font-size: 0.95rem; color: var(--text); }
+        .saved-class-meta { font-size: 0.8rem; color: var(--text-light); }
+        .saved-class-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .saved-class-actions { display: flex; gap: 6px; align-items: center; }
+        .delete-class-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+        .delete-class-btn:hover { color: var(--danger); background: var(--danger-bg); }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div id="license-footer"></div>
+
+    <script>
+    // ============================================================
+    // LICENSE KEY GENERATION & VALIDATION (shared algorithm)
+    // ============================================================
+    const LICENSE_SECRET = 'RollCallSecret2026';
+
+    function hashString(str) {
+        // Simple but deterministic hash function
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash);
+    }
+
+    function base36(num) {
+        // Convert number to base36 (0-9, a-z)
+        return Math.abs(num).toString(36).toUpperCase().substring(0, 5).padEnd(5, '0');
+    }
+
+    function generateLicenseKey(licenseName, licenseType, year) {
+        // licenseName: string (any case, will be normalized)
+        // licenseType: 'annual' or 'lifetime'
+        // year: 4-digit year for annual, or any value for lifetime
+
+        const normalizedName = licenseName.trim().toLowerCase();
+        const typeChar = licenseType === 'lifetime' ? 'L' : 'A';
+        const yearCode = licenseType === 'lifetime' ? '9999' : String(year).padStart(4, '0');
+
+        // Build the payload to hash
+        const payload = normalizedName + typeChar + yearCode + LICENSE_SECRET;
+        const hash = hashString(payload);
+
+        // Split hash into 3 parts for the key
+        const part1 = base36(hash);
+        const part2 = base36(hash >> 8);
+        const part3 = base36(hash >> 16);
+
+        return `RC-${part1}-${part2}-${part3}`;
+    }
+
+    function validateLicenseKey(licenseName, licenseKey, licenseType, year) {
+        // Regenerate the key and compare
+        const expectedKey = generateLicenseKey(licenseName, licenseType, year);
+
+        if (licenseKey !== expectedKey) {
+            return { valid: false, message: 'Invalid license key.' };
+        }
+
+        // Check expiration for annual licenses
+        if (licenseType === 'annual') {
+            const expirationDate = new Date(year, 7, 31); // August 31 of the encoded year
+            const today = new Date();
+
+            if (today > expirationDate) {
+                return { valid: false, message: `License expired on ${expirationDate.toLocaleDateString()}.` };
+            }
+        }
+
+        return { valid: true, message: 'License activated successfully.' };
+    }
+
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
+    const CONFIG = {
+        RENDER_SCALE: 3,
+        WEIGHTS: { learning: 5, in_progress: 3, mastered: 1 },
+        MC_CORRECT_TO_ADVANCE: 2,
+        FR_CORRECT_TO_MASTER: 2,
+        NUM_MC_OPTIONS: 4,
+        MAX_LEVENSHTEIN_RATIO: 0.35,
+        FEEDBACK_DELAY: 1800,
+        STORAGE_PREFIX: 'rollCall_',
+        LICENSE_STORAGE_KEY: 'rollCall_license',
+    };
+
+    // ============================================================
+    // APPLICATION STATE
+    // ============================================================
+    let state = {
+        screen: 'welcome',
+        students: [],
+        currentStudent: null,
+        currentOptions: [],
+        lastStudentId: null,
+        quizMode: null,
+        feedback: null,
+        answeredThisRound: false,
+        selectedOptionId: null,
+        classId: null,
+        className: '',
+        detectedClassName: '',
+        error: null,
+        processingMessage: '',
+        modalOpen: false,
+        licenseInfo: null,
+        showSignUp: false,
+    };
+
+    // ============================================================
+    // UTILITY FUNCTIONS
+    // ============================================================
+    function simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const c = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + c;
+            hash = hash & hash;
+        }
+        return CONFIG.STORAGE_PREFIX + Math.abs(hash).toString(36);
+    }
+
+    function shuffleArray(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    // ============================================================
+    // LICENSE MANAGEMENT
+    // ============================================================
+    function saveLicenseInfo(name, licenseType, year, key) {
+        state.licenseInfo = { name, licenseType, year, key, activatedAt: Date.now() };
+        try {
+            localStorage.setItem(CONFIG.LICENSE_STORAGE_KEY, JSON.stringify(state.licenseInfo));
+        } catch (e) {
+            console.warn('Failed to save license info:', e);
+        }
+    }
+
+    function loadLicenseInfo() {
+        try {
+            const raw = localStorage.getItem(CONFIG.LICENSE_STORAGE_KEY);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function checkLicenseValid() {
+        const licenseInfo = loadLicenseInfo();
+        if (!licenseInfo) return false;
+
+        const { name, licenseType, year, key } = licenseInfo;
+        if (!key) return false;
+
+        const validation = validateLicenseKey(name, key, licenseType, year);
+        return validation.valid;
+    }
+
+    function clearLicense() {
+        state.licenseInfo = null;
+        try {
+            localStorage.removeItem(CONFIG.LICENSE_STORAGE_KEY);
+        } catch (e) {}
+    }
+
+    // ============================================================
+    // GENDER DETECTION
+    // ============================================================
+    const FEMALE_NAMES = new Set([
+        'mary','patricia','jennifer','linda','barbara','elizabeth','susan','jessica','sarah','karen',
+        'lisa','nancy','betty','margaret','sandra','ashley','dorothy','kimberly','emily','donna',
+        'michelle','carol','amanda','melissa','deborah','stephanie','rebecca','sharon','laura','cynthia',
+        'kathleen','amy','angela','shirley','anna','brenda','pamela','emma','nicole','helen',
+        'samantha','katherine','christine','debra','rachel','carolyn','janet','catherine','maria','heather',
+        'diane','ruth','julie','olivia','joyce','virginia','victoria','kelly','lauren','christina',
+        'joan','evelyn','judith','megan','andrea','cheryl','hannah','jacqueline','martha','gloria',
+        'teresa','ann','sara','madison','frances','kathryn','janice','jean','abigail','alice',
+        'judy','sophia','grace','denise','amber','doris','marilyn','danielle','beverly','isabella',
+        'theresa','diana','natalie','brittany','charlotte','marie','kayla','alexis','lori','alyssa',
+        'erin','allison','molly','claire','clare','brooke','paige','jenna','tiffany','haley','hayley',
+        'taylor','mia','chloe','lily','ella','avery','riley','aria','zoe','layla','nora','zoey',
+        'camila','eleanor','penelope','scarlett','stella','violet','aurora','savannah','audrey',
+        'brooklyn','bella','claire','skylar','lucy','paisley','everly','addison','leah','caroline',
+        'kennedy','maya','naomi','aaliyah','elena','ellie','gabriella','gianna','ariana','valentina',
+        'ruby','eva','willow','ivy','emilia','autumn','adeline','madelyn','nevaeh','serenity',
+        'kinsley','elena','melanie','brianna','bailey','destiny','sydney','morgan','mackenzie','kylie',
+        'priya','ananya','aisha','fatima','yuki','mei','suki','hana','rosa','carmen',
+        'gabrielle','ana','lucia','valentina','camille','colleen','siobhan','maeve','bridget','fiona',
+        'alexandra','adriana','bianca','cassandra','celeste','elena','elise','genevieve','giselle','irene',
+        'joanna','juliana','lena','lila','liliana','lorena','madeleine','mariana','miriam','monica',
+        'nadia','natasha','noelle','priscilla','renee','selena','serena','simone','tatiana','vivian',
+        'sofia','isabel','natalia','cecilia','josephine','agnes','rose','rosalie','veronica','anastasia',
+        'adelaide','eliana','juliet','margot','matilda','vivienne','beatrice','delphine','estelle','felicity',
+        'georgia','harriet','josefina','magdalena','marisol','ottilie','philippa','rosalind','seraphina','wilhelmina',
+        'annabelle','annalise','marygrace','marykate','maryclaire','maryjane','maryanne','marybeth','maryellen','maryrose',
+        'ximena','sophie','freya','elodie','iris','wren','esme','junie','margaux','odette',
+        'guadalupe','esperanza','soledad','ines','pilar','concepcion','remedios','milagros','dolores','consuelo',
+    ]);
+    const MALE_NAMES = new Set([
+        'james','robert','john','michael','david','william','richard','joseph','thomas','charles',
+        'christopher','daniel','matthew','anthony','mark','donald','steven','paul','andrew','joshua',
+        'kenneth','kevin','brian','george','timothy','ronald','edward','jason','jeffrey','ryan',
+        'jacob','gary','nicholas','eric','jonathan','stephen','larry','justin','scott','brandon',
+        'benjamin','samuel','raymond','gregory','frank','alexander','patrick','jack','dennis','jerry',
+        'tyler','aaron','jose','adam','nathan','henry','peter','zachary','douglas','harold',
+        'kyle','noah','gerald','carl','sean','austin','arthur','lawrence','dylan','jesse',
+        'jordan','bryan','billy','bruce','albert','willie','gabriel','logan','alan','eugene',
+        'ethan','elijah','mason','liam','aiden','jackson','sebastian','caleb','owen','luke',
+        'connor','ian','christian','hunter','landon','cameron','eli','max','chase','dominic',
+        'cole','carter','tristan','leo','miles','nolan','parker','gavin','blake','lincoln',
+        'hudson','weston','evan','easton','cooper','asher','jaxon','colton','brody','declan',
+        'harrison','mateo','theodore','ezra','oliver','grayson','ryder','emmett','sawyer','bennett',
+        'rowan','brooks','roman','axel','kai','tucker','carson','maverick','easton','beckham',
+        'antonio','carlos','diego','enrique','fernando','francisco','javier','jorge','luis','marcos',
+        'miguel','rafael','ricardo','ahmed','ali','omar','ravi','raj','vijay','arun',
+        'hiroshi','kenji','takeshi','wei','jin','ming','sven','lars','hans','pierre',
+        'philippe','jean','marco','luca','matteo','connor','brendan','declan','liam','sean',
+        'cedric','claude','dominique','emile','henri','leon','lucien','marcel','pascal','rene',
+        'benedict','nathaniel','xavier','vincent','augustine','ignatius','francis','matthias','titus','silas',
+        'elias','isaiah','josiah','malachi','felix','emeric','anselm','clement','cyril','desmond',
+        'edmund','gideon','isaac','jasper','julian','lorenzo','maximilian','otto','reuben','rupert',
+        'sylvester','thaddeus','wesley','anthony','giovanni','lorenzo','emiliano','santiago','joaquin','maximo',
+    ]);
+
+    function guessGender(fullName) {
+        const rawFirst = fullName.trim().split(/\s+/)[0] || '';
+        const firstName = rawFirst.toLowerCase();
+        // Normalize away hyphens/apostrophes (e.g. "Mary-Kate" -> "marykate")
+        // so compound names still hit the lookup below.
+        const normalized = firstName.replace(/['-]/g, '');
+
+        if (FEMALE_NAMES.has(firstName) || FEMALE_NAMES.has(normalized)) return 'female';
+        if (MALE_NAMES.has(firstName) || MALE_NAMES.has(normalized)) return 'male';
+
+        // "Mary ___" compound first names (Mary Kate, Mary Grace, Mary-Claire, etc.)
+        // are a common naming convention this list can't fully enumerate — treat
+        // any name starting with "mary" (and longer than just "mary" itself) as female.
+        if (normalized.length > 4 && normalized.startsWith('mary')) return 'female';
+
+        return 'unknown';
+    }
+
+    // ============================================================
+    // FUZZY STRING MATCHING
+    // ============================================================
+    function levenshtein(a, b) {
+        const m = a.length, n = b.length;
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                dp[i][j] = a[i-1] === b[j-1]
+                    ? dp[i-1][j-1]
+                    : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+            }
+        }
+        return dp[m][n];
+    }
+
+    function normalizeStr(s) {
+        return s.trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function isNameMatch(input, correctName) {
+        const a = normalizeStr(input);
+        const b = normalizeStr(correctName);
+
+        if (a === b) return true;
+
+        const threshold = Math.max(2, Math.floor(b.length * CONFIG.MAX_LEVENSHTEIN_RATIO));
+        if (levenshtein(a, b) <= threshold) return true;
+
+        const correctParts = b.split(' ');
+        if (correctParts.length > 2) {
+            const firstLast = correctParts[0] + ' ' + correctParts[correctParts.length - 1];
+            if (levenshtein(a, firstLast) <= Math.max(2, Math.floor(firstLast.length * CONFIG.MAX_LEVENSHTEIN_RATIO))) {
+                return true;
+            }
+        }
+
+        const firstName = correctParts[0];
+        const firstNameThreshold = Math.max(2, Math.floor(firstName.length * 0.4));
+        if (levenshtein(a, firstName) <= firstNameThreshold) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // ============================================================
+    // PDF PROCESSING
+    // ============================================================
+    async function processPDF(file) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const allStudents = [];
+
+        try {
+            const firstPage = await pdf.getPage(1);
+            const textContent = await firstPage.getTextContent();
+            const allText = textContent.items.map(i => i.str.trim()).filter(Boolean);
+            state.detectedClassName = detectClassName(allText, file.name);
+        } catch {}
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            updateProcessing(`Processing page ${pageNum} of ${pdf.numPages}...`);
+            const page = await pdf.getPage(pageNum);
+            const students = await processPage(page);
+            allStudents.push(...students);
+        }
+
+        return allStudents;
+    }
+
+    function detectClassName(textItems, fileName) {
+        const coursePatterns = [
+            /\b([A-Z]{2,5}\s*\d{3,5}[A-Z]?\b(?:\s*[-–—]\s*\d{2,3})?)/,
+            /\b((?:Section|Sec|Class)\s*[:.]?\s*\w+)/i,
+            /\b(\w+\s+\d{3,5}\s*[-–—:]\s*.{5,40})/,
+        ];
+
+        const termPattern = /\b((?:Spring|Summer|Fall|Autumn|Winter)\s+\d{4})\b/i;
+        let term = '';
+
+        for (const text of textItems) {
+            const termMatch = text.match(termPattern);
+            if (termMatch) term = termMatch[1];
+
+            for (const pattern of coursePatterns) {
+                const match = text.match(pattern);
+                if (match && match[1].length < 50) {
+                    let name = match[1].trim();
+                    if (term && !name.toLowerCase().includes(term.toLowerCase())) {
+                        name += ' — ' + term;
+                    }
+                    return name;
+                }
+            }
+        }
+
+        if (fileName) {
+            const cleaned = fileName.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+            if (cleaned.length > 2 && cleaned.length < 60) {
+                return cleaned + (term ? ' — ' + term : '');
+            }
+        }
+
+        return term || '';
+    }
+
+    async function processPage(page) {
+        const scale = CONFIG.RENDER_SCALE;
+        const viewport = page.getViewport({ scale });
+        const baseViewport = page.getViewport({ scale: 1 });
+        const pageHeight = baseViewport.height;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const textContent = await page.getTextContent();
+        const items = textContent.items
+            .filter(item => item.str.trim().length > 0)
+            .map(item => {
+                const tx = item.transform[4];
+                const ty = item.transform[5];
+                return {
+                    text: item.str.trim(),
+                    fontName: item.fontName,
+                    fontSize: Math.abs(item.transform[0]),
+                    pdfX: tx,
+                    pdfY: ty,
+                    canvasX: tx * scale,
+                    canvasY: (pageHeight - ty) * scale,
+                    width: item.width * scale,
+                };
+            });
+
+        // Generic noise filter: URLs, timestamps, page numbers, very short text.
+        // We intentionally keep this minimal — the grid-based column detection
+        // (below) handles course headers, room numbers, etc. structurally,
+        // so we don't need to pattern-match specific words.
+        const isNoise = t =>
+            /^https?:\/\//.test(t) ||
+            /^\d+\/\d+\/\d+/.test(t) ||
+            /^\d+\/\d+$/.test(t) ||
+            /^\d+:\d+\s*(AM|PM)/i.test(t) ||
+            /^\d+$/.test(t) ||
+            t.length <= 2 ||
+            /\bOnline\s+Photo\b/i.test(t) ||
+            /\bNo\s+Photo\b/i.test(t) ||
+            /commit=/.test(t) ||
+            /print_layout/.test(t) ||
+            /upCount=/.test(t);
+
+        const cleanItems = items.filter(item => !isNoise(item.text));
+        if (cleanItems.length === 0) return [];
+
+        const isMetadata = t =>
+            /\b(Classification|Degree|College|Major|Minor|Concentration|Standing|Program|Advisor|Email|Phone|ID)\s*:/i.test(t) ||
+            /\b(Bachelor|Master|Doctor|Associate)\s+(of|in)\s+/i.test(t) ||
+            /\b(Freshman|Sophomore|Junior|Senior)\b/i.test(t) ||
+            /\bNon-?\s*Matriculat/i.test(t) ||
+            /\bCollege\s+of\s+/i.test(t) ||
+            /\bUndeclared\b/i.test(t) ||
+            /\bCollege:\s*/i.test(t);
+
+        // Detect preferred pronouns from rosters (e.g. Canvas "Name and Pronouns" view)
+        const PRONOUN_PATTERN = /^(she\s*\/\s*her|he\s*\/\s*him|they\s*\/\s*them|ze\s*\/\s*zir|ze\s*\/\s*hir|xe\s*\/\s*xem|ey\s*\/\s*em|she\s+or\s+he|he\s+or\s+she|she\s+or\s+they|they\s+or\s+she|he\s+or\s+they|they\s+or\s+he|use\s+my\s+name|please\s+ask\s+me|ask\s+me|any)\.{0,3}$/i;
+        const isPronoun = t => PRONOUN_PATTERN.test(t.trim());
+
+        function pronounsToGender(pronouns) {
+            if (!pronouns) return null;
+            const p = pronouns.toLowerCase().trim();
+            if (/^she\s*\/\s*her$/.test(p) || /^she\s+or\s+/.test(p)) return 'female';
+            if (/^he\s*\/\s*him$/.test(p) || /^he\s+or\s+/.test(p)) return 'male';
+            if (/they|ze|xe|ey|use\s+my\s+name|ask\s+me|any|please/i.test(p)) return 'nonbinary';
+            return null;
+        }
+
+        // Detect grid columns: cluster X positions, then keep only columns that
+        // have text at 3+ distinct Y positions. This filters out header/footer text
+        // (course titles, room numbers, etc.) that appears at irregular X positions
+        // only once or twice, regardless of what the text says.
+        const allColumns = clusterValues(cleanItems.map(i => i.canvasX), 60 * scale);
+        if (allColumns.length === 0) return [];
+
+        const columns = allColumns.filter(col => {
+            const itemsInCol = cleanItems.filter(item =>
+                Math.abs(item.canvasX - col.center) < 60 * scale
+            );
+            const distinctYRows = clusterValues(itemsInCol.map(i => i.canvasY), 30 * scale);
+            return distinctYRows.length >= 3;
+        });
+        if (columns.length === 0) return [];
+
+        function getColumnIdx(x) {
+            let best = 0, minDist = Infinity;
+            columns.forEach((col, idx) => {
+                const dist = Math.abs(x - col.center);
+                if (dist < minDist) { minDist = dist; best = idx; }
+            });
+            return best;
+        }
+
+        // Only assign items that are close to a real grid column
+        const colGroups = columns.map(() => []);
+        cleanItems.forEach(item => {
+            const idx = getColumnIdx(item.canvasX);
+            if (Math.abs(item.canvasX - columns[idx].center) < 60 * scale) {
+                colGroups[idx].push(item);
+            }
+        });
+
+        const studentEntries = [];
+        for (const group of colGroups) {
+            group.sort((a, b) => a.canvasY - b.canvasY);
+
+            let current = null;
+            let prevY = -Infinity;
+
+            for (const item of group) {
+                const gap = item.canvasY - prevY;
+
+                if (gap > 30 * scale || !current) {
+                    if (current && current.nameTexts.length > 0) {
+                        studentEntries.push(current);
+                    }
+                    current = { nameTexts: [], metaTexts: [], pronounTexts: [], colIdx: getColumnIdx(item.canvasX) };
+                }
+
+                if (isPronoun(item.text)) {
+                    current.pronounTexts.push(item);
+                } else if (isMetadata(item.text)) {
+                    current.metaTexts.push(item);
+                } else if (current.metaTexts.length === 0 && current.pronounTexts.length === 0) {
+                    current.nameTexts.push(item);
+                }
+
+                prevY = item.canvasY;
+            }
+            if (current && current.nameTexts.length > 0) {
+                studentEntries.push(current);
+            }
+        }
+
+        // Post-process: detect multi-word pronouns that got split across text items.
+        // PDF renderers may split "He or They" into separate items ["He","or","They"].
+        // For each entry, check if the bottom-most line of nameTexts forms a pronoun
+        // when the words are joined together. If so, move those items to pronounTexts.
+        for (const entry of studentEntries) {
+            if (entry.pronounTexts.length > 0 || entry.nameTexts.length < 2) continue;
+            // Group nameTexts by Y position (items within 5px share a line)
+            const lines = [];
+            let curLine = [entry.nameTexts[0]];
+            for (let i = 1; i < entry.nameTexts.length; i++) {
+                if (Math.abs(entry.nameTexts[i].canvasY - curLine[0].canvasY) < 5 * scale) {
+                    curLine.push(entry.nameTexts[i]);
+                } else {
+                    lines.push(curLine);
+                    curLine = [entry.nameTexts[i]];
+                }
+            }
+            lines.push(curLine);
+            // Check if the last line is a pronoun when words are joined
+            if (lines.length >= 2) {
+                const lastLine = lines[lines.length - 1];
+                const joined = lastLine.map(t => t.text).join(' ').trim();
+                if (isPronoun(joined)) {
+                    entry.pronounTexts = lastLine;
+                    entry.nameTexts = entry.nameTexts.filter(t => !lastLine.includes(t));
+                }
+            }
+        }
+
+        if (studentEntries.length === 0) return [];
+
+        // Build entries, filtering metadata from name text and cleaning results
+        const rawEntries = studentEntries.map(s => {
+            // Filter out any name text items that look like metadata or pronouns
+            const cleanNameTexts = s.nameTexts.filter(t => !isMetadata(t.text) && !isPronoun(t.text));
+            if (cleanNameTexts.length === 0) return null;
+
+            let name = cleanNameTexts.map(t => t.text).join(' ');
+
+            // Strip any inline metadata that might be joined with the name
+            name = name.replace(/\s*(Classification|Degree|College|Major|Minor|Concentration|Standing|Program|Advisor)\s*:.*/gi, '');
+            name = name.replace(/\s*(Bachelor|Master|Doctor|Associate)\s+(of|in)\s+.*/gi, '');
+            name = name.replace(/\s*(Freshman|Sophomore|Junior|Senior)\b.*/gi, '');
+            name = name.replace(/\s*Non-?\s*Matriculat.*/gi, '');
+            name = name.trim();
+
+            if (!name || name.length < 2) return null;
+
+            // Extract pronouns if present
+            const pronouns = s.pronounTexts.length > 0
+                ? s.pronounTexts.map(t => t.text.trim()).join(' ').trim()
+                : null;
+
+            // Compute the full width of the name text span
+            const firstText = cleanNameTexts[0];
+
+            return {
+                name,
+                pronouns,
+                nameTopY: firstText.canvasY - firstText.fontSize * scale * 0.8,
+                nameX: firstText.canvasX,
+                colIdx: s.colIdx,
+            };
+        }).filter(Boolean);
+
+        // Post-filter: student names must be 3+ characters, contain letters,
+        // and never contain digits. This single rule catches course codes,
+        // room numbers, credit hours, student counts, years, times, etc.
+        // without needing to pattern-match any specific text.
+        const entries = rawEntries.filter(e => {
+            const n = e.name;
+            if (n.length < 3) return false;
+            if (!/[a-zA-Z]{2,}/.test(n)) return false;
+            if (/\d/.test(n)) return false;
+            return true;
+        });
+
+        const rows = clusterValues(entries.map(e => e.nameTopY), 30 * scale);
+
+        const colSpacing = columns.length > 1
+            ? (columns[columns.length - 1].center - columns[0].center) / (columns.length - 1)
+            : viewport.width * 0.7;
+        const rowSpacing = rows.length > 1
+            ? (rows[rows.length - 1].center - rows[0].center) / (rows.length - 1)
+            : viewport.height * 0.3;
+
+        // Find each photo by what's actually on the page, not by guessing its
+        // position from fixed ratios of the text layout. Different roster tools
+        // lay photos out differently relative to the caption below them (flush
+        // with its left edge, centered under it, with varying gaps) — no single
+        // fixed offset/ratio formula holds across them, and guessing wrong
+        // shifts or crops every photo the same way. Instead: open a generous
+        // search window above each name (bounded so it can't reach into a
+        // neighboring column or the previous row) and detect the actual photo
+        // within it from pixel content.
+        return entries.map(entry => {
+            const searchLeft = entry.nameX - colSpacing * 0.5;
+            const searchRight = entry.nameX + colSpacing * 1.0;
+            const searchTop = Math.max(0, entry.nameTopY - rowSpacing * 0.95);
+            const searchBottom = entry.nameTopY - 2 * scale;
+
+            const bbox = detectContentBBox(
+                ctx,
+                Math.max(0, searchLeft),
+                searchTop,
+                Math.min(viewport.width, searchRight) - Math.max(0, searchLeft),
+                searchBottom - searchTop
+            );
+
+            // No real photo content in the search window — this is a roster
+            // row with a name but no picture (an advisor/staff contact, a
+            // placeholder), not a student. Drop it rather than showing an
+            // empty box.
+            if (!bbox) return null;
+
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = bbox.w;
+            cropCanvas.height = bbox.h;
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCtx.drawImage(canvas, bbox.x, bbox.y, bbox.w, bbox.h, 0, 0, bbox.w, bbox.h);
+
+            return {
+                id: Math.random().toString(36).substring(2, 9),
+                name: entry.name,
+                pronouns: entry.pronouns || null,
+                gender: (entry.pronouns ? pronounsToGender(entry.pronouns) : null) || guessGender(entry.name),
+                imageDataUrl: cropCanvas.toDataURL('image/jpeg', 0.85),
+                status: 'learning',
+                mcCorrect: 0,
+                frCorrect: 0,
+                totalAttempts: 0,
+                lastSeen: 0,
+            };
+        }).filter(Boolean);
+    }
+
+    // Locates the actual photo within a search window by pixel content, rather
+    // than assuming a fixed position/size relative to the caption text. Uses
+    // DENSITY (not a raw min/max bounding box of any non-white pixel) so a
+    // single stray mark or hairline rule in the window — a table border, a
+    // scanning artifact — can't blow the box wide open: a real photo is
+    // solidly non-white through most of its rows and columns, while noise is
+    // sparse and/or short, so the widest contiguous dense run wins.
+    function detectContentBBox(ctx, sx, sy, sw, sh) {
+        sx = Math.max(0, Math.round(sx));
+        sy = Math.max(0, Math.round(sy));
+        sw = Math.round(sw);
+        sh = Math.round(sh);
+        if (sw <= 4 || sh <= 4) return null;
+
+        let data;
+        try {
+            data = ctx.getImageData(sx, sy, sw, sh).data;
+        } catch (e) {
+            return null; // can't sample (e.g. tainted canvas)
+        }
+
+        const WHITE_THRESHOLD = 242;
+        const isContent = (x, y) => {
+            const i = (y * sw + x) * 4;
+            return data[i] < WHITE_THRESHOLD || data[i + 1] < WHITE_THRESHOLD || data[i + 2] < WHITE_THRESHOLD;
+        };
+
+        const colDensity = new Array(sw).fill(0);
+        const rowDensity = new Array(sh).fill(0);
+        for (let y = 0; y < sh; y++) {
+            for (let x = 0; x < sw; x++) {
+                if (isContent(x, y)) { colDensity[x]++; rowDensity[y]++; }
+            }
+        }
+        for (let x = 0; x < sw; x++) colDensity[x] /= sh;
+        for (let y = 0; y < sh; y++) rowDensity[y] /= sw;
+
+        function widestRun(density, threshold) {
+            let bestStart = -1, bestLen = 0, curStart = -1;
+            for (let i = 0; i <= density.length; i++) {
+                const above = i < density.length && density[i] > threshold;
+                if (above && curStart === -1) curStart = i;
+                if (!above && curStart !== -1) {
+                    const len = i - curStart;
+                    if (len > bestLen) { bestLen = len; bestStart = curStart; }
+                    curStart = -1;
+                }
+            }
+            return bestLen === 0 ? null : { start: bestStart, len: bestLen };
+        }
+
+        // Try progressively looser density thresholds in case the photo has a
+        // lot of plain/light background (fewer non-white pixels per row/col).
+        let colRun = null, rowRun = null;
+        for (const th of [0.12, 0.06, 0.03]) {
+            colRun = widestRun(colDensity, th);
+            rowRun = widestRun(rowDensity, th);
+            if (colRun && rowRun && colRun.len >= 20 && rowRun.len >= 20) break;
+        }
+        if (!colRun || !rowRun || colRun.len < 20 || rowRun.len < 20) return null;
+
+        return { x: sx + colRun.start, y: sy + rowRun.start, w: colRun.len, h: rowRun.len };
+    }
+
+    function clusterValues(values, threshold) {
+        if (values.length === 0) return [];
+        const sorted = [...values].sort((a, b) => a - b);
+        const clusters = [[sorted[0]]];
+        for (let i = 1; i < sorted.length; i++) {
+            if (sorted[i] - sorted[i - 1] > threshold) {
+                clusters.push([sorted[i]]);
+            } else {
+                clusters[clusters.length - 1].push(sorted[i]);
+            }
+        }
+        return clusters.map(c => ({
+            center: c.reduce((a, b) => a + b) / c.length,
+            count: c.length,
+        }));
+    }
+
+    // ============================================================
+    // PERSISTENCE (localStorage)
+    // ============================================================
+    function saveProgress() {
+        if (!state.classId) return;
+        const data = {
+            className: state.className || '',
+            students: state.students.map(s => ({
+                id: s.id,
+                name: s.name,
+                pronouns: s.pronouns || null,
+                gender: s.gender || 'unknown',
+                imageDataUrl: s.imageDataUrl,
+                status: s.status,
+                mcCorrect: s.mcCorrect,
+                frCorrect: s.frCorrect,
+                totalAttempts: s.totalAttempts,
+                lastSeen: s.lastSeen,
+            })),
+            savedAt: Date.now(),
+        };
+        try {
+            localStorage.setItem(state.classId, JSON.stringify(data));
+        } catch (e) {
+            console.warn('Failed to save progress:', e);
+        }
+    }
+
+    function loadProgress(classId) {
+        try {
+            const raw = localStorage.getItem(classId);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function mergeProgress(newStudents, saved) {
+        const savedMap = {};
+        saved.students.forEach(s => { savedMap[normalizeStr(s.name)] = s; });
+
+        return newStudents.map(ns => {
+            const key = normalizeStr(ns.name);
+            const old = savedMap[key];
+            if (old) {
+                return {
+                    ...ns,
+                    pronouns: ns.pronouns || old.pronouns || null,
+                    gender: old.gender || ns.gender || 'unknown',
+                    status: old.status,
+                    mcCorrect: old.mcCorrect,
+                    frCorrect: old.frCorrect,
+                    totalAttempts: old.totalAttempts,
+                    lastSeen: old.lastSeen,
+                };
+            }
+            return ns;
+        });
+    }
+
+    // ============================================================
+    // QUIZ ENGINE
+    // ============================================================
+    function selectNextStudent() {
+        const students = state.students;
+        if (students.length === 0) return null;
+
+        const eligible = students.length > 1
+            ? students.filter(s => s.id !== state.lastStudentId)
+            : students;
+
+        const now = Date.now();
+        const weighted = eligible.map(s => {
+            let w = CONFIG.WEIGHTS[s.status] || 1;
+            const timeSince = now - (s.lastSeen || 0);
+            if (timeSince > 60000) w *= 1.3;
+            if (timeSince > 300000) w *= 1.5;
+            return { student: s, weight: w };
+        });
+
+        const total = weighted.reduce((sum, w) => sum + w.weight, 0);
+        let r = Math.random() * total;
+        for (const w of weighted) {
+            r -= w.weight;
+            if (r <= 0) return w.student;
+        }
+        return weighted[weighted.length - 1].student;
+    }
+
+    function generateMCOptions(correctStudent) {
+        const others = state.students.filter(s => s.id !== correctStudent.id);
+        const needed = CONFIG.NUM_MC_OPTIONS - 1;
+
+        let distractors;
+        if (correctStudent.gender && correctStudent.gender !== 'unknown' && correctStudent.gender !== 'nonbinary') {
+            const sameGender = shuffleArray(others.filter(s => s.gender === correctStudent.gender));
+            if (sameGender.length >= needed) {
+                distractors = sameGender.slice(0, needed);
+            } else {
+                const rest = shuffleArray(others.filter(s => s.gender !== correctStudent.gender));
+                distractors = [...sameGender, ...rest].slice(0, needed);
+            }
+        } else {
+            distractors = shuffleArray(others).slice(0, needed);
+        }
+
+        const options = shuffleArray([correctStudent, ...distractors]);
+        return options.map(s => ({ id: s.id, name: s.name }));
+    }
+
+    function getQuizMode(student) {
+        return student.mcCorrect < CONFIG.MC_CORRECT_TO_ADVANCE ? 'mc' : 'fr';
+    }
+
+    function advanceToNextQuestion() {
+        if (state.students.length > 0 && state.students.every(s => s.status === 'mastered')) {
+            state.screen = 'dashboard';
+            render();
+            return;
+        }
+
+        const student = selectNextStudent();
+        if (!student) return;
+
+        state.currentStudent = student;
+        state.quizMode = getQuizMode(student);
+        state.feedback = null;
+        state.answeredThisRound = false;
+
+        if (state.quizMode === 'mc') {
+            state.currentOptions = generateMCOptions(student);
+        } else {
+            state.currentOptions = [];
+        }
+
+        render();
+
+        if (state.quizMode === 'fr') {
+            setTimeout(() => {
+                const input = document.getElementById('fr-input');
+                if (input) input.focus();
+            }, 50);
+        }
+    }
+
+    function handleMCAnswer(selectedId) {
+        if (state.answeredThisRound) return;
+        state.answeredThisRound = true;
+        state.selectedOptionId = selectedId;
+
+        const correct = selectedId === state.currentStudent.id;
+        const student = state.students.find(s => s.id === state.currentStudent.id);
+        student.totalAttempts++;
+        student.lastSeen = Date.now();
+
+        if (correct) {
+            student.mcCorrect++;
+            if (student.mcCorrect >= CONFIG.MC_CORRECT_TO_ADVANCE) {
+                student.status = 'in_progress';
+            }
+            state.feedback = { correct: true, message: `Correct! ${state.currentStudent.name}` };
+        } else {
+            student.mcCorrect = Math.max(0, student.mcCorrect - 1);
+            state.feedback = {
+                correct: false,
+                message: `Not quite — that's ${state.currentStudent.name}`,
+            };
+        }
+
+        state.lastStudentId = state.currentStudent.id;
+        saveProgress();
+        render();
+
+        scheduleNextQuestion(CONFIG.FEEDBACK_DELAY);
+    }
+
+    function handleFRAnswer(input) {
+        if (state.answeredThisRound) return;
+        state.answeredThisRound = true;
+
+        const correct = isNameMatch(input, state.currentStudent.name);
+        const student = state.students.find(s => s.id === state.currentStudent.id);
+        student.totalAttempts++;
+        student.lastSeen = Date.now();
+
+        if (correct) {
+            student.frCorrect++;
+            if (student.frCorrect >= CONFIG.FR_CORRECT_TO_MASTER) {
+                student.status = 'mastered';
+            }
+            state.feedback = { correct: true, message: `Perfect! That's ${state.currentStudent.name}` };
+        } else {
+            student.frCorrect = Math.max(0, student.frCorrect - 1);
+            state.feedback = {
+                correct: false,
+                message: `Not quite. The answer is ${state.currentStudent.name}`,
+            };
+        }
+
+        state.lastStudentId = state.currentStudent.id;
+        saveProgress();
+        render();
+
+        scheduleNextQuestion(CONFIG.FEEDBACK_DELAY + 400);
+    }
+
+    function handleSkip() {
+        if (state.answeredThisRound) return;
+        state.answeredThisRound = true;
+
+        const student = state.students.find(s => s.id === state.currentStudent.id);
+        student.totalAttempts++;
+        student.lastSeen = Date.now();
+
+        state.feedback = {
+            correct: false,
+            message: `The answer is ${state.currentStudent.name}`,
+        };
+
+        state.lastStudentId = state.currentStudent.id;
+        saveProgress();
+        render();
+
+        scheduleNextQuestion(CONFIG.FEEDBACK_DELAY + 400);
+    }
+
+    let nextQuestionTimer = null;
+    function scheduleNextQuestion(delay) {
+        clearTimeout(nextQuestionTimer);
+        nextQuestionTimer = setTimeout(() => {
+            if (state.modalOpen) {
+                scheduleNextQuestion(300);
+                return;
+            }
+            advanceToNextQuestion();
+        }, delay);
+    }
+
+    // ============================================================
+    // UI RENDERING
+    // ============================================================
+    function render() {
+        const app = document.getElementById('app');
+
+        // License gate removed for the free colleague-shared build — always go
+        // straight to the app (renderLanding/renderSignUp/renderLicenseFooter
+        // and the whole license-key system below are unused but left in place
+        // rather than torn out, in case a licensed build is ever needed again).
+        switch (state.screen) {
+            case 'welcome': app.innerHTML = renderWelcome(); break;
+            case 'upload': app.innerHTML = renderUpload(); break;
+            case 'processing': app.innerHTML = renderProcessing(); break;
+            case 'review': app.innerHTML = renderReview(); break;
+            case 'quiz': app.innerHTML = renderQuiz(); break;
+            case 'dashboard': app.innerHTML = renderDashboard(); break;
+        }
+
+        attachEventListeners();
+    }
+
+    function renderHeader(title, actions = '') {
+        return `
+            <div class="header">
+                <h1>${title}</h1>
+                <div class="header-actions">${actions}</div>
+            </div>`;
+    }
+
+    function renderLicenseFooter() {
+        const footer = document.getElementById('license-footer');
+        if (state.licenseInfo) {
+            footer.innerHTML = `
+                <div class="license-footer">
+                    Licensed to <strong>${state.licenseInfo.name}</strong>
+                    <a href="#" id="change-license" onclick="handleChangeLicense(event)">Change</a>
+                </div>`;
+        }
+    }
+
+    function renderLanding() {
+        return `
+            <div class="license-screen">
+                <div class="license-card">
+                    <div class="license-header">
+                        <img src="Diverse crowd raising hands in unity.png" alt="Diverse crowd raising hands" class="license-hero-img">
+                        <h1>RollCall</h1>
+                        <p>Learn your students' names quickly with an adaptive quiz that tracks your progress.</p>
+                        <div class="license-how-it-works">
+                            <button class="license-how-toggle" id="license-how-toggle">
+                                <span class="arrow">&#9654;</span> How It Works
+                            </button>
+                            <div class="license-how-panel" id="license-how-panel">
+                                <div class="license-how-content">
+                                    <p><strong>1. Upload a Class Roster PDF</strong> — Use a PDF with a grid of student photos and names beneath each photo (like those from your university's student information system).</p>
+                                    <p><strong>2. Review &amp; Name Your Class</strong> — Verify the extracted photos and names are correct. Give your class a name so you can find it later.</p>
+                                    <p><strong>3. Multiple Choice Round</strong> — You'll see a student's photo and pick their name from four options. Options are drawn from same-gender students in the class to keep it challenging. Two correct answers in a row advances you.</p>
+                                    <p><strong>4. Free Response Round</strong> — Now type the student's first name. The quiz is forgiving about minor spelling differences. Two consecutive correct answers marks a student as mastered.</p>
+                                    <p><strong>Adaptive quizzing</strong> prioritizes students you've gotten wrong recently, so you spend more time on the names you're still learning.</p>
+                                    <p><strong>Your progress is saved automatically</strong> in this browser, so you can close the page and come back anytime.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="license-research">
+                            <div class="research-highlight">
+                                <span class="research-icon">&#128202;</span>
+                                <span><strong>85% of students</strong> say it matters that their instructor knows their name.<sup>1</sup></span>
+                            </div>
+                            <div class="research-highlight">
+                                <span class="research-icon">&#127891;</span>
+                                <span>Students whose names are known <strong>participate more, ask more questions, and take greater academic risks.</strong><sup>2</sup></span>
+                            </div>
+                            <div class="research-highlight">
+                                <span class="research-icon">&#129309;</span>
+                                <span>Name-learning <strong>improves student wellbeing</strong>, builds classroom community, and enables deeper learning.<sup>3</sup></span>
+                            </div>
+                            <div class="research-highlight">
+                                <span class="research-icon">&#127758;</span>
+                                <span>Learning names increases students' <strong>motivation to learn</strong>, perception of teacher care, and signals cross-cultural respect.<sup>4</sup></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;margin-top:24px;">
+                        <a href="#purchase" target="_blank" class="btn btn-primary" id="go-to-signup" style="width:100%;padding:14px;font-size:1.05rem;text-decoration:none;justify-content:center;">Get a License</a>
+                    </div>
+                    <p style="text-align:center;margin-top:12px;font-size:0.85rem;color:var(--text-light);">Already have a license key? <a href="#" id="go-to-activate" style="color:var(--primary-light);text-decoration:none;">Activate it here</a></p>
+                    <div class="license-footnotes">
+                        <p><sup>1</sup> Cooper, K. M., Haney, B., Krieg, A., &amp; Brownell, S. E. (2017). <em>CBE&mdash;Life Sciences Education, 16</em>(1).</p>
+                        <p><sup>2</sup> Central Michigan University, Office of Curriculum &amp; Instructional Support (2025).</p>
+                        <p><sup>3</sup> O&rsquo;Brien, M., Leiman, T., &amp; Duffy, J. (2014). <em>QUT Law Review, 14</em>(1), 114&ndash;128.</p>
+                        <p><sup>4</sup> Murdoch, Y. D., Lim, H., &amp; Kang, A. (2018). <em>English in Education, 52</em>(3), 225&ndash;247.</p>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function renderSignUp() {
+        return `
+            <div class="license-screen">
+                <div class="license-card">
+                    <div class="license-header" style="margin-bottom:24px;">
+                        <h1>RollCall</h1>
+                        <p>Activate your license to get started.</p>
+                    </div>
+                    <form class="license-form" id="license-form">
+                        <div class="form-group">
+                            <label for="license-name">Licensed Name</label>
+                            <input type="text" id="license-name" placeholder="Professor Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>License Type</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="license-type" value="annual" checked>
+                                    Annual License
+                                </label>
+                                <label>
+                                    <input type="radio" name="license-type" value="lifetime">
+                                    Lifetime License
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group year-selector visible" id="year-selector">
+                            <label for="license-year">Academic Year</label>
+                            <select id="license-year"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="license-key">License Key</label>
+                            <input type="text" id="license-key" placeholder="RC-XXXXX-XXXXX-XXXXX" required autocomplete="off" spellcheck="false" style="font-family:monospace;letter-spacing:1px;">
+                        </div>
+                        <div id="license-message"></div>
+                        <button type="button" class="btn btn-primary activate-btn" id="activate-btn" style="width:100%;">Activate License</button>
+                    </form>
+                    <p style="text-align:center;margin-top:16px;">
+                        <a href="#" id="back-to-landing" style="color:var(--primary-light);text-decoration:none;font-size:0.9rem;">&larr; Back</a>
+                    </p>
+                </div>
+            </div>`;
+    }
+
+    function renderProgressStats() {
+        const counts = { learning: 0, in_progress: 0, mastered: 0 };
+        state.students.forEach(s => counts[s.status]++);
+        const total = state.students.length;
+        const pct = total > 0 ? Math.round((counts.mastered / total) * 100) : 0;
+
+        return `
+            <div class="stats-bar">
+                <span class="stat"><span class="stat-dot dot-learning"></span> ${counts.learning} Learning</span>
+                <span class="stat"><span class="stat-dot dot-progress"></span> ${counts.in_progress} In Progress</span>
+                <span class="stat"><span class="stat-dot dot-mastered"></span> ${counts.mastered} Mastered</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: ${pct}%"></div>
+            </div>
+            <p style="text-align:center;color:var(--text-light);font-size:0.85rem;margin-top:4px;">${pct}% Mastered</p>`;
+    }
+
+    function getSavedClasses() {
+        const classes = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(CONFIG.STORAGE_PREFIX) && key !== CONFIG.LICENSE_STORAGE_KEY) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    const count = data.students ? data.students.length : 0;
+                    const mastered = data.students ? data.students.filter(s => s.status === 'mastered').length : 0;
+                    const date = data.savedAt ? new Date(data.savedAt).toLocaleDateString() : 'Unknown';
+                    const className = data.className || '';
+                    classes.push({ key, count, mastered, date, className, data });
+                } catch {}
+            }
+        }
+        classes.sort((a, b) => (b.data.savedAt || 0) - (a.data.savedAt || 0));
+        return classes;
+    }
+
+    function renderWelcome() {
+        const savedClasses = getSavedClasses();
+
+        let savedHtml = '';
+        if (savedClasses.length > 0) {
+            const items = savedClasses.map(c => {
+                const pct = c.count > 0 ? Math.round((c.mastered / c.count) * 100) : 0;
+                const displayName = c.className || `${c.count} students`;
+                return `
+                    <div class="saved-class-card">
+                        <div class="saved-class-info">
+                            <span class="saved-class-name">${displayName}</span>
+                            <span class="saved-class-meta">${c.count} students &middot; ${c.mastered}/${c.count} mastered &middot; Last practiced ${c.date}</span>
+                        </div>
+                        <div class="saved-class-actions">
+                            <div style="width:60px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:${pct === 100 ? 'var(--success)' : 'var(--primary-light)'};border-radius:3px;"></div>
+                            </div>
+                            <span style="font-size:0.75rem;color:var(--text-light);min-width:32px;">${pct}%</span>
+                            <button class="btn btn-sm btn-primary resume-btn" data-key="${c.key}">Resume</button>
+                            <button class="delete-class-btn" data-key="${c.key}" title="Delete this class">&times;</button>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            savedHtml = `
+                <div style="margin-top:32px;">
+                    <h3 style="font-size:1.1rem;margin-bottom:12px;color:var(--text);">Your Classes</h3>
+                    <div style="display:flex;flex-direction:column;gap:10px;">${items}</div>
+                </div>`;
+        }
+
+        return `
+            <div class="fade-in">
+                <div class="welcome-hero">
+                    <h1>RollCall</h1>
+                    <p>Learn your students' names before they learn yours.</p>
+                </div>
+
+                <div style="text-align:center;">
+                    <button class="instructions-toggle" id="instructions-toggle">
+                        <span class="arrow">&#9654;</span> How It Works
+                    </button>
+                </div>
+                <div class="instructions-panel" id="instructions-panel">
+                    <div class="instructions-content">
+                        <p><strong>Round 1 — Multiple Choice:</strong> You'll see a student's photo and pick their name from four options. The options are drawn from other students of the same gender in the class to keep it challenging. Once you get a student right twice in a row, they advance to Round 2.</p>
+                        <p><strong>Round 2 — Type the Name:</strong> Now you'll see the photo and type the student's first name. You don't need to type the last name, and the quiz is forgiving about minor spelling differences. Two consecutive correct answers here and the student is marked as mastered.</p>
+                        <p><strong>Adaptive quizzing:</strong> The program prioritizes students you've gotten wrong recently, so you'll spend more time on the names you're still learning and less on those you already know.</p>
+                        <p><strong>Skip ahead:</strong> If you're already confident about a student, you can manually promote them to the next level from the results screen after answering. You can also click a student's name on the results screen to edit it — handy if a student goes by a nickname in class.</p>
+                        <p><strong>Your progress is saved automatically</strong> in this browser, so you can close the page and come back anytime to pick up where you left off.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="welcome-steps">
+                        <div class="welcome-step">
+                            <div class="step-number">1</div>
+                            <div class="step-text">
+                                <h3>Upload a Class Roster PDF</h3>
+                                <p>Use a PDF with a grid of student photos and names beneath each photo (like those from your university's student information system). Works best with 4-across formatting (four photos per row).</p>
+                            </div>
+                        </div>
+                        <div class="welcome-step">
+                            <div class="step-number">2</div>
+                            <div class="step-text">
+                                <h3>Review &amp; Name Your Class</h3>
+                                <p>Verify the extracted photos and names are correct. Give your class a name (e.g., "ACCT 101 — Spring 2026") so you can find it later.</p>
+                            </div>
+                        </div>
+                        <div class="welcome-step">
+                            <div class="step-number">3</div>
+                            <div class="step-text">
+                                <h3>Start Quizzing</h3>
+                                <p>The quiz begins with multiple choice, then advances to free response as you learn each name. Your progress is saved automatically in this browser.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;">
+                        <button class="btn btn-primary" id="get-started" style="padding:14px 40px;font-size:1.05rem;">
+                            Upload a Class Roster
+                        </button>
+                    </div>
+                </div>
+
+                ${savedHtml}
+
+                <p style="text-align:center;margin-top:24px;font-size:0.8rem;color:var(--text-light);">
+                    Your progress is saved in this browser. To use on another device, just open this file there and re-upload your roster — your progress will start fresh on each device.
+                </p>
+            </div>`;
+    }
+
+    function renderUpload() {
+        return `
+            ${renderHeader('RollCall',
+                `<button class="btn btn-outline btn-sm" id="back-to-welcome">Back</button>`)}
+            <div class="card fade-in">
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">&#128203;</div>
+                    <h2>Upload Class Roster PDF</h2>
+                    <p>Drag and drop your PDF here, or click to browse</p>
+                    <p style="margin-top:8px;font-size:0.8rem;color:var(--text-light);">
+                        Works with grid-layout rosters (photos with names below) — works best with 4-across formatting (four photos per row)
+                    </p>
+                    <input type="file" accept=".pdf" class="upload-input" id="file-input">
+                </div>
+            </div>`;
+    }
+
+    function renderProcessing() {
+        return `
+            ${renderHeader('RollCall')}
+            <div class="card processing fade-in">
+                <div class="spinner"></div>
+                <h2>Processing PDF</h2>
+                <p>${state.processingMessage || 'Extracting student photos and names...'}</p>
+            </div>`;
+    }
+
+    function renderReview() {
+        const count = state.students.length;
+        const nameVal = state.className || state.detectedClassName || '';
+        return `
+            ${renderHeader('Review Extracted Students',
+                `<button class="btn btn-outline" id="back-to-upload">Upload Different</button>`)}
+            <div class="card fade-in">
+                <div class="class-name-section">
+                    <label for="class-name-input">Class Name</label>
+                    <input type="text" id="class-name-input" class="class-name-input"
+                           value="${nameVal.replace(/"/g, '&quot;')}"
+                           placeholder="e.g., ACCT 101 — Spring 2026"
+                           autocomplete="off">
+                    <div class="class-name-hint">Give this class a name so you can find it later when you return.</div>
+                </div>
+                <p style="margin-bottom:12px;color:var(--text-light);">
+                    Found <strong>${count}</strong> student${count !== 1 ? 's' : ''}.
+                    Hover over a card to remove incorrect entries. Click a name to edit it.
+                    The first round of name learning gives you multiple choice options of other names of the same gender from this class. When preferred pronouns are available on the roster, they are used to determine gender automatically. Otherwise, we attempt to auto-detect probable gender based on names — you can also indicate student gender below to facilitate name quizzing.
+                </p>
+                ${count === 0 ? `
+                    <div class="error-box">
+                        <p>No students were extracted from this PDF. The file might use a layout
+                        that isn't supported yet. Try a different PDF or use one with a grid
+                        of photos and names.</p>
+                    </div>` : ''}
+                <div class="review-grid">
+                    ${state.students.map((s, i) => `
+                        <div class="review-card" data-idx="${i}">
+                            <img src="${s.imageDataUrl}" alt="${s.name}">
+                            <button class="remove-btn" data-idx="${i}" title="Remove">&times;</button>
+                            <div class="name" data-idx="${i}" title="Click to edit">${s.name}</div>
+                            ${s.pronouns ? `<div class="pronouns-label">${s.pronouns}</div>` : ''}
+                            <div class="gender-toggle">
+                                <button class="gender-btn ${s.gender === 'female' ? 'active-female' : ''}" data-idx="${i}" data-gender="female">F</button>
+                                <button class="gender-btn ${s.gender === 'nonbinary' ? 'active-nonbinary' : ''}" data-idx="${i}" data-gender="nonbinary">NB</button>
+                                <button class="gender-btn ${s.gender === 'male' ? 'active-male' : ''}" data-idx="${i}" data-gender="male">M</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                ${count >= 2 ? `
+                    <div style="text-align:center;margin-top:20px;">
+                        <button class="btn btn-primary btn-success" id="start-quiz" style="padding:14px 40px;font-size:1.1rem;">
+                            Start Learning Names
+                        </button>
+                    </div>` : count === 1 ? `
+                    <div class="error-box" style="margin-top:16px;">
+                        <p>Need at least 2 students for the quiz. Try uploading a different PDF.</p>
+                    </div>` : ''}
+            </div>`;
+    }
+
+    function renderQuiz() {
+        const s = state.currentStudent;
+        if (!s) return renderHeader('RollCall') + '<p>Loading...</p>';
+
+        const mode = state.quizMode;
+        const fb = state.feedback;
+
+        let answerArea = '';
+        if (mode === 'mc') {
+            answerArea = `
+                <div class="mc-grid">
+                    ${state.currentOptions.map(opt => {
+                        let cls = 'mc-option';
+                        if (fb) {
+                            if (opt.id === s.id) cls += ' correct show-correct';
+                            if (opt.id === state.selectedOptionId && opt.id !== s.id) cls += ' incorrect';
+                        }
+                        return `<button class="${cls}" data-id="${opt.id}" ${fb ? 'disabled' : ''}>
+                            ${opt.name}
+                        </button>`;
+                    }).join('')}
+                </div>
+                ${!fb ? `<button class="btn btn-outline btn-sm" id="skip-btn" style="margin-top:8px;">I don't know — show me</button>` : ''}`;
+        } else {
+            const inputCls = fb ? (fb.correct ? 'correct' : 'incorrect') : '';
+            answerArea = `
+                <div class="fr-container">
+                    <input type="text" id="fr-input" class="fr-input ${inputCls}"
+                           placeholder="Type the student's first name..."
+                           ${fb ? 'disabled' : ''}
+                           autocomplete="off" spellcheck="false">
+                    <button class="btn btn-primary fr-submit" id="fr-submit" ${fb ? 'disabled' : ''}>
+                        Submit
+                    </button>
+                    ${!fb ? `<button class="btn btn-outline btn-sm" id="skip-btn" style="margin-top:8px;width:100%;">I don't know — show me</button>` : ''}
+                </div>`;
+        }
+
+        let feedbackHtml = '';
+        if (fb) {
+            const student = state.students.find(st => st.id === s.id);
+            const currentStatus = student ? student.status : s.status;
+            const canPromote = currentStatus !== 'mastered';
+            const nextLevel = currentStatus === 'learning' ? 'In Progress' : 'Mastered';
+
+            let actionButtons = '';
+            if (fb.correct && canPromote) {
+                actionButtons += `<button class="btn btn-sm btn-promote" id="promote-btn" data-student-id="${s.id}" title="Skip to ${nextLevel}">&#9889; Promote to ${nextLevel}</button>`;
+            }
+            actionButtons += `<button class="btn btn-sm btn-correct-name" id="correct-name-btn" title="Edit this student's name">&#9998; Correct Name</button>`;
+
+            feedbackHtml = `
+                <div class="feedback ${fb.correct ? 'feedback-correct' : 'feedback-incorrect'} fade-in">
+                    ${fb.message}
+                </div>
+                <div class="quiz-actions fade-in">
+                    ${actionButtons}
+                </div>`;
+        }
+
+        const statusLabel = { learning: 'Learning', in_progress: 'In Progress', mastered: 'Mastered' };
+        const student = state.students.find(st => st.id === s.id);
+        const currentStatus = student ? student.status : s.status;
+
+        const quizTitle = state.className ? state.className : 'RollCall';
+        return `
+            ${renderHeader(quizTitle,
+                `<button class="btn btn-outline btn-sm" id="show-dashboard">Dashboard</button>
+                 <button class="btn btn-outline btn-sm" id="back-to-upload">New Class</button>`)}
+            <div class="quiz-container fade-in">
+                <span class="quiz-mode-badge ${mode === 'mc' ? 'badge-mc' : 'badge-fr'}">
+                    ${mode === 'mc' ? 'Multiple Choice' : 'Free Response'}
+                </span>
+                <div class="quiz-photo-wrapper">
+                    <img class="quiz-photo ${fb && !fb.correct ? 'shake' : ''}" src="${s.imageDataUrl}" alt="Student photo">
+                </div>
+                <p style="color:var(--text-light);font-size:0.85rem;margin:8px 0;">
+                    Who is this student?
+                </p>
+                ${answerArea}
+                ${feedbackHtml}
+                ${renderProgressStats()}
+            </div>`;
+    }
+
+    function renderDashboard() {
+        const counts = { learning: 0, in_progress: 0, mastered: 0 };
+        state.students.forEach(s => counts[s.status]++);
+        const total = state.students.length;
+        const allMastered = counts.mastered === total && total > 0;
+
+        const statusLabel = { learning: 'Learning', in_progress: 'In Progress', mastered: 'Mastered' };
+        const sortOrder = { learning: 0, in_progress: 1, mastered: 2 };
+        const sorted = [...state.students].sort((a, b) => sortOrder[a.status] - sortOrder[b.status]);
+
+        const dashTitle = state.className ? `${state.className} — Dashboard` : 'Dashboard';
+        return `
+            ${renderHeader(dashTitle,
+                `<button class="btn btn-primary btn-sm" id="continue-quiz">Continue Quiz</button>
+                 <button class="btn btn-outline btn-sm" id="back-to-upload">New Class</button>`)}
+            <div class="fade-in">
+                ${allMastered ? `
+                    <div class="celebration card">
+                        <h2>All Names Mastered!</h2>
+                        <p>You've learned all ${total} students. Amazing work!</p>
+                        <button class="btn btn-primary" id="continue-quiz" style="margin-top:12px;">Keep Practicing</button>
+                    </div>` : ''}
+
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="number" style="color:var(--danger);">${counts.learning}</div>
+                        <div class="label">Learning</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" style="color:var(--warning);">${counts.in_progress}</div>
+                        <div class="label">In Progress</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" style="color:var(--success);">${counts.mastered}</div>
+                        <div class="label">Mastered</div>
+                    </div>
+                </div>
+
+                ${renderProgressStats()}
+
+                <div class="dashboard-grid" style="margin-top:20px;">
+                    ${sorted.map(s => `
+                        <div class="dashboard-card">
+                            <img src="${s.imageDataUrl}" alt="${s.name}">
+                            <div class="info">
+                                <div class="name">${s.name}</div>
+                                <span class="status-badge status-${s.status}">
+                                    ${statusLabel[s.status]}
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="text-align:center;margin-top:24px;">
+                    <button class="btn btn-danger btn-sm" id="reset-progress">Reset All Progress</button>
+                </div>
+            </div>`;
+    }
+
+    // ============================================================
+    // EVENT HANDLERS
+    // ============================================================
+    function attachEventListeners() {
+        // License form
+        const licenseForm = document.getElementById('license-form');
+        if (licenseForm) {
+            const typeRadios = document.querySelectorAll('input[name="license-type"]');
+            const yearSelector = document.getElementById('year-selector');
+            const licenseYear = document.getElementById('license-year');
+
+            // Populate year selector
+            const currentYear = new Date().getFullYear();
+            for (let i = 0; i <= 5; i++) {
+                const year = currentYear + i;
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = `${year} (expires Aug 31)`;
+                licenseYear.appendChild(option);
+            }
+
+            typeRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'annual') {
+                        yearSelector.classList.add('visible');
+                        licenseYear.required = true;
+                    } else {
+                        yearSelector.classList.remove('visible');
+                        licenseYear.required = false;
+                    }
+                });
+            });
+
+            licenseForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleLicenseActivation();
+            });
+
+            // Also attach directly to button in case form submit is blocked
+            const activateBtn = document.getElementById('activate-btn');
+            if (activateBtn) {
+                activateBtn.addEventListener('click', () => {
+                    handleLicenseActivation();
+                });
+            }
+
+            // How It Works toggle on license screen
+            const licenseHowToggle = document.getElementById('license-how-toggle');
+            if (licenseHowToggle) {
+                licenseHowToggle.addEventListener('click', () => {
+                    licenseHowToggle.classList.toggle('open');
+                    document.getElementById('license-how-panel').classList.toggle('open');
+                });
+            }
+        }
+
+        // Landing page navigation
+        const goToActivate = document.getElementById('go-to-activate');
+        if (goToActivate) {
+            goToActivate.addEventListener('click', (e) => {
+                e.preventDefault();
+                state.showSignUp = true;
+                render();
+            });
+        }
+
+        // Sign Up → Back to landing
+        const backToLanding = document.getElementById('back-to-landing');
+        if (backToLanding) {
+            backToLanding.addEventListener('click', (e) => {
+                e.preventDefault();
+                state.showSignUp = false;
+                render();
+            });
+        }
+
+        // How It Works toggle on landing page (outside license form)
+        if (!document.getElementById('license-form')) {
+            const landingHowToggle = document.getElementById('license-how-toggle');
+            if (landingHowToggle) {
+                landingHowToggle.addEventListener('click', () => {
+                    landingHowToggle.classList.toggle('open');
+                    document.getElementById('license-how-panel').classList.toggle('open');
+                });
+            }
+        }
+
+        // Upload area
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', e => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            uploadArea.addEventListener('drop', e => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type === 'application/pdf') handleFileUpload(file);
+            });
+            fileInput.addEventListener('change', e => {
+                const file = e.target.files[0];
+                if (file) handleFileUpload(file);
+            });
+        }
+
+        // Get started button
+        const getStartedBtn = document.getElementById('get-started');
+        if (getStartedBtn) {
+            getStartedBtn.addEventListener('click', () => {
+                state.screen = 'upload';
+                render();
+            });
+        }
+
+        // Instructions toggle
+        const instrToggle = document.getElementById('instructions-toggle');
+        if (instrToggle) {
+            instrToggle.addEventListener('click', () => {
+                instrToggle.classList.toggle('open');
+                document.getElementById('instructions-panel').classList.toggle('open');
+            });
+        }
+
+        // Resume buttons
+        document.querySelectorAll('.resume-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const key = e.target.dataset.key;
+                handleResume(key);
+            });
+        });
+
+        // Delete class buttons
+        document.querySelectorAll('.delete-class-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const key = e.target.dataset.key;
+                handleDeleteClass(key);
+            });
+        });
+
+        // Back to welcome
+        const backToWelcome = document.getElementById('back-to-welcome');
+        if (backToWelcome) {
+            backToWelcome.addEventListener('click', () => {
+                state.screen = 'welcome';
+                render();
+            });
+        }
+
+        // Back to upload
+        document.querySelectorAll('#back-to-upload').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.screen = 'welcome';
+                state.className = '';
+                state.detectedClassName = '';
+                render();
+            });
+        });
+
+        // Review screen - remove button
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(e.target.dataset.idx);
+                state.students.splice(idx, 1);
+                render();
+            });
+        });
+
+        // Name editing in review
+        document.querySelectorAll('.review-card .name').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                const currentName = state.students[idx].name;
+                el.innerHTML = `<input class="name-edit-input" value="${currentName}" data-idx="${idx}">`;
+                const input = el.querySelector('input');
+                input.focus();
+                input.select();
+                input.addEventListener('blur', () => {
+                    const newName = input.value.trim();
+                    if (newName) state.students[idx].name = newName;
+                    render();
+                });
+                input.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter') input.blur();
+                    if (ev.key === 'Escape') { input.value = currentName; input.blur(); }
+                });
+            });
+        });
+
+        // Class name input
+        const classNameInput = document.getElementById('class-name-input');
+        if (classNameInput) {
+            classNameInput.addEventListener('input', (e) => {
+                state.className = e.target.value;
+            });
+        }
+
+        // Gender toggle buttons
+        document.querySelectorAll('.gender-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(e.target.dataset.idx);
+                const gender = e.target.dataset.gender;
+                state.students[idx].gender = gender;
+                render();
+            });
+        });
+
+        // Start quiz
+        const startBtn = document.getElementById('start-quiz');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                const classNameInput = document.getElementById('class-name-input');
+                if (classNameInput) {
+                    state.className = classNameInput.value.trim();
+                }
+                state.classId = simpleHash(state.students.map(s => s.name).sort().join('|'));
+                const saved = loadProgress(state.classId);
+                if (saved) {
+                    state.students = mergeProgress(state.students, saved);
+                    if (!state.className && saved.className) {
+                        state.className = saved.className;
+                    }
+                }
+                saveProgress();
+                state.screen = 'quiz';
+                advanceToNextQuestion();
+            });
+        }
+
+        // MC option click
+        document.querySelectorAll('.mc-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (state.answeredThisRound) return;
+                handleMCAnswer(btn.dataset.id);
+            });
+        });
+
+        // Skip button
+        const skipBtn = document.getElementById('skip-btn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', handleSkip);
+        }
+
+        // FR submit
+        const frSubmit = document.getElementById('fr-submit');
+        const frInput = document.getElementById('fr-input');
+        if (frSubmit && frInput) {
+            frSubmit.addEventListener('click', () => handleFRAnswer(frInput.value));
+            frInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleFRAnswer(frInput.value);
+            });
+        }
+
+        // Promote button
+        const promoteBtn = document.getElementById('promote-btn');
+        if (promoteBtn) {
+            promoteBtn.addEventListener('click', () => {
+                clearTimeout(nextQuestionTimer);
+                const studentId = promoteBtn.dataset.studentId;
+                const student = state.students.find(s => s.id === studentId);
+                if (!student) return;
+                if (student.status === 'learning') {
+                    student.status = 'in_progress';
+                    student.mcCorrect = CONFIG.MC_CORRECT_TO_ADVANCE;
+                } else if (student.status === 'in_progress') {
+                    student.status = 'mastered';
+                    student.frCorrect = CONFIG.FR_CORRECT_TO_MASTER;
+                }
+                saveProgress();
+                advanceToNextQuestion();
+            });
+        }
+
+        // Correct name button
+        const correctNameBtn = document.getElementById('correct-name-btn');
+        if (correctNameBtn) {
+            correctNameBtn.addEventListener('click', () => {
+                showNameCorrectionModal();
+            });
+        }
+
+        // Dashboard
+        document.querySelectorAll('#show-dashboard').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.screen = 'dashboard';
+                render();
+            });
+        });
+
+        // Continue quiz
+        document.querySelectorAll('#continue-quiz').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.screen = 'quiz';
+                advanceToNextQuestion();
+            });
+        });
+
+        // Reset progress
+        const resetBtn = document.getElementById('reset-progress');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                if (confirm('Reset all progress? This cannot be undone.')) {
+                    state.students.forEach(s => {
+                        s.status = 'learning';
+                        s.mcCorrect = 0;
+                        s.frCorrect = 0;
+                        s.totalAttempts = 0;
+                        s.lastSeen = 0;
+                    });
+                    saveProgress();
+                    render();
+                }
+            });
+        }
+    }
+
+    // ============================================================
+    // LICENSE FUNCTIONS
+    // ============================================================
+    function handleLicenseActivation() {
+        const messageEl = document.getElementById('license-message');
+        try {
+            const name = document.getElementById('license-name').value.trim();
+            const key = document.getElementById('license-key').value.trim().toUpperCase();
+            const typeRadios = document.querySelectorAll('input[name="license-type"]');
+            let type = 'annual';
+            for (const radio of typeRadios) {
+                if (radio.checked) {
+                    type = radio.value;
+                    break;
+                }
+            }
+
+            if (!name) {
+                messageEl.innerHTML = '<div class="license-error">Please enter your licensed name.</div>';
+                return;
+            }
+
+            if (!key) {
+                messageEl.innerHTML = '<div class="license-error">Please enter your license key.</div>';
+                return;
+            }
+
+            let year = new Date().getFullYear();
+            if (type === 'annual') {
+                const yearSelect = document.getElementById('license-year');
+                year = parseInt(yearSelect.value);
+            }
+
+            // Validate the license key
+            const validation = validateLicenseKey(name, key, type, year);
+
+            if (!validation.valid) {
+                messageEl.innerHTML = `<div class="license-error">${validation.message}</div>`;
+                return;
+            }
+
+            // Key is valid — save and proceed
+            saveLicenseInfo(name, type, year, key);
+            state.licenseInfo = { name, licenseType: type, year, key };
+
+            messageEl.innerHTML = '<div class="license-success">License activated successfully!</div>';
+            setTimeout(() => {
+                state.screen = 'welcome';
+                render();
+            }, 1000);
+        } catch (err) {
+            messageEl.innerHTML = `<div class="license-error">Error: ${err.message}</div>`;
+        }
+    }
+
+    function handleChangeLicense(e) {
+        if (e) e.preventDefault();
+        clearLicense();
+        state.showSignUp = false;
+        state.screen = 'welcome';
+        render();
+    }
+
+    // ============================================================
+    // NAME CORRECTION MODAL
+    // ============================================================
+    function showNameCorrectionModal() {
+        const student = state.students.find(s => s.id === state.currentStudent.id);
+        if (!student) return;
+
+        state.modalOpen = true;
+
+        const modal = document.createElement('div');
+        modal.id = 'name-modal-overlay';
+        modal.className = 'name-modal-overlay';
+        modal.innerHTML = `
+            <div class="name-modal">
+                <h3>Correct Student Name</h3>
+                <p>Update the name for this student (e.g., use a nickname or fix a spelling error).</p>
+                <input type="text" id="name-modal-input" class="name-modal-input" value="${student.name}" autocomplete="off" spellcheck="false">
+                <div class="name-modal-buttons">
+                    <button class="btn btn-outline btn-sm" id="name-modal-cancel">Cancel</button>
+                    <button class="btn btn-primary btn-sm" id="name-modal-save">Save</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const input = document.getElementById('name-modal-input');
+        if (input) { input.focus(); input.select(); }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeNameModal();
+        });
+        document.getElementById('name-modal-cancel').addEventListener('click', closeNameModal);
+        document.getElementById('name-modal-save').addEventListener('click', () => {
+            saveNameCorrection(document.getElementById('name-modal-input').value);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveNameCorrection(input.value);
+            if (e.key === 'Escape') closeNameModal();
+        });
+    }
+
+    function closeNameModal() {
+        const overlay = document.getElementById('name-modal-overlay');
+        if (overlay) overlay.remove();
+        state.modalOpen = false;
+    }
+
+    function saveNameCorrection(newName) {
+        newName = newName.trim();
+        if (!newName) return;
+
+        const student = state.students.find(s => s.id === state.currentStudent.id);
+        if (student) {
+            student.name = newName;
+            // Only re-guess gender if no pronouns were extracted from the roster
+            if (!student.pronouns) {
+                student.gender = guessGender(newName);
+            }
+            saveProgress();
+        }
+        closeNameModal();
+
+        if (state.feedback && !state.feedback.correct) {
+            state.feedback.message = state.feedback.message.replace(state.currentStudent.name, newName);
+        }
+        state.currentStudent.name = newName;
+        render();
+    }
+
+    // ============================================================
+    // FILE HANDLING
+    // ============================================================
+    async function handleFileUpload(file) {
+        state.screen = 'processing';
+        state.processingMessage = 'Loading PDF...';
+        state.error = null;
+        render();
+
+        try {
+            const students = await processPDF(file);
+            if (students.length === 0) {
+                state.error = 'No students could be extracted from this PDF.';
+            }
+            state.students = students;
+            state.screen = 'review';
+        } catch (err) {
+            console.error('PDF processing error:', err);
+            state.error = err.message || 'Failed to process PDF';
+            state.screen = 'review';
+            state.students = [];
+        }
+        render();
+    }
+
+    function handleResume(key) {
+        const saved = loadProgress(key);
+        if (saved && saved.students) {
+            state.students = saved.students.map(s => ({
+                ...s,
+                pronouns: s.pronouns || null,
+                gender: s.gender || guessGender(s.name),
+            }));
+            state.classId = key;
+            state.className = saved.className || '';
+            state.screen = 'quiz';
+            advanceToNextQuestion();
+        }
+    }
+
+    function handleDeleteClass(key) {
+        if (confirm('Delete this class and all its progress? This cannot be undone.')) {
+            try { localStorage.removeItem(key); } catch {}
+            render();
+        }
+    }
+
+    function updateProcessing(msg) {
+        state.processingMessage = msg;
+        const pEl = document.querySelector('.processing p');
+        if (pEl) pEl.textContent = msg;
+    }
+
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+    if (typeof pdfjsLib === 'undefined') {
+        document.getElementById('app').innerHTML = `
+            <div style="max-width:600px;margin:80px auto;text-align:center;">
+                <div class="card">
+                    <h2 style="color:var(--danger);margin-bottom:12px;">Failed to Load PDF Library</h2>
+                    <p style="color:var(--text-light);">
+                        Could not load PDF.js from CDN. Please check your internet connection and reload the page.
+                    </p>
+                    <button class="btn btn-primary" style="margin-top:16px;" onclick="location.reload()">Reload</button>
+                </div>
+            </div>`;
+    } else {
+        // Check for existing license
+        const existingLicense = loadLicenseInfo();
+        if (existingLicense) {
+            state.licenseInfo = existingLicense;
+        }
+
+        state.screen = 'welcome';
+        render();
+    }
+    </script>
+</body>
+</html>
