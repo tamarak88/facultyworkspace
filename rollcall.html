@@ -934,7 +934,23 @@
             transition: all 0.15s;
         }
         .saved-class-card:hover { border-color: var(--primary-light); background: #f0f5ff; }
-        .saved-class-info { display: flex; flex-direction: column; gap: 2px; }
+        .saved-class-info { display: flex; flex-direction: column; gap: 2px; cursor: pointer; flex: 1; min-width: 0; }
+        .saved-class-info:hover .saved-class-name { color: var(--primary-light); text-decoration: underline; }
+        .saved-class-hint { font-size: 0.72rem; color: var(--primary-light); }
+        /* Class photo grid */
+        .gallery-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+        .gallery-toolbar .count { color: var(--text-light); font-size: 0.9rem; margin-right: auto; }
+        .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; background: #fff; }
+        .seg button { border: none; background: transparent; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; color: var(--text-light); font-family: inherit; }
+        .seg button.on { background: var(--primary-light); color: #fff; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--gsize, 170px), 1fr)); gap: 16px; }
+        .gallery-card { background: var(--card); border-radius: var(--radius-sm); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; transition: transform .12s, box-shadow .12s; }
+        .gallery-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+        .gallery-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #e2e8f0; }
+        .gallery-card .gname { padding: 9px 10px 11px; text-align: center; font-weight: 600; font-size: 0.9rem; min-height: 38px; }
+        .gallery-card .gname.hidden-name { color: var(--text-light); font-weight: 500; font-size: 0.8rem; letter-spacing: 0.02em; }
+        .gallery-card .gstatus { display: block; font-size: 0.7rem; font-weight: 500; color: var(--text-light); margin-top: 2px; }
+        .gallery-tip { text-align: center; color: var(--text-light); font-size: 0.8rem; margin-top: 18px; }
         .saved-class-name { font-weight: 600; font-size: 0.95rem; color: var(--text); }
         .saved-class-meta { font-size: 0.8rem; color: var(--text-light); }
         .saved-class-progress {
@@ -1924,6 +1940,7 @@
             case 'review': app.innerHTML = renderReview(); break;
             case 'quiz': app.innerHTML = renderQuiz(); break;
             case 'dashboard': app.innerHTML = renderDashboard(); break;
+            case 'gallery': app.innerHTML = renderGallery(); break;
         }
 
         attachEventListeners();
@@ -2095,9 +2112,10 @@
                 const displayName = c.className || `${c.count} students`;
                 return `
                     <div class="saved-class-card">
-                        <div class="saved-class-info">
+                        <div class="saved-class-info open-gallery" data-key="${c.key}" title="View class photos">
                             <span class="saved-class-name">${displayName}</span>
                             <span class="saved-class-meta">${c.count} students &middot; ${c.mastered}/${c.count} mastered &middot; Last practiced ${c.date}</span>
+                            <span class="saved-class-hint">&#128247; Click to see class photos</span>
                         </div>
                         <div class="saved-class-actions">
                             <div style="width:60px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
@@ -2365,6 +2383,44 @@
             </div>`;
     }
 
+    function renderGallery() {
+        const g = state.gallery || (state.gallery = { names: 'show', sort: 'roster', size: 'medium', revealed: {} });
+        const list = [...state.students];
+        if (g.sort === 'first') list.sort((a, b) => a.name.localeCompare(b.name));
+        if (g.sort === 'last') {
+            const last = n => { const p = n.trim().split(/\s+/); return (p[p.length - 1] + ' ' + n).toLowerCase(); };
+            list.sort((a, b) => last(a.name).localeCompare(last(b.name)));
+        }
+        const statusLabel = { learning: 'Learning', in_progress: 'In progress', mastered: 'Mastered' };
+        const sizes = { small: '120px', medium: '170px', large: '240px' };
+        const segBtn = (grp, val, label) => `<button class="${g[grp] === val ? 'on' : ''}" data-grp="${grp}" data-val="${val}">${label}</button>`;
+        const title = state.className || 'Class Photos';
+        return `
+            ${renderHeader(title,
+                `<button class="btn btn-primary btn-sm" id="continue-quiz">Practice Names</button>
+                 <button class="btn btn-outline btn-sm" id="edit-class">Add / Edit Students</button>
+                 <button class="btn btn-outline btn-sm" id="back-to-welcome">Back</button>`)}
+            <div class="fade-in">
+                <div class="gallery-toolbar">
+                    <span class="count">${list.length} student${list.length !== 1 ? 's' : ''}</span>
+                    <div class="seg" title="Hide names to test yourself">${segBtn('names', 'show', 'Show names')}${segBtn('names', 'hide', 'Hide names')}</div>
+                    <div class="seg">${segBtn('sort', 'roster', 'Roster order')}${segBtn('sort', 'first', 'First name')}${segBtn('sort', 'last', 'Last name')}</div>
+                    <div class="seg">${segBtn('size', 'small', 'S')}${segBtn('size', 'medium', 'M')}${segBtn('size', 'large', 'L')}</div>
+                </div>
+                <div class="gallery-grid" style="--gsize:${sizes[g.size] || sizes.medium}">
+                    ${list.map(s => {
+                        const show = g.names === 'show' || g.revealed[s.id];
+                        return `<div class="gallery-card" data-id="${s.id}" title="${g.names === 'hide' ? 'Click to reveal name' : ''}">
+                            <img src="${s.imageDataUrl}" alt="${show ? s.name : 'Student photo'}">
+                            <div class="gname ${show ? '' : 'hidden-name'}">${show ? s.name : 'Click to reveal'}
+                                ${show ? `<span class="gstatus">${statusLabel[s.status] || ''}</span>` : ''}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                ${g.names === 'hide' ? `<p class="gallery-tip">Test yourself: say each name, then click the photo to check.</p>` : ''}
+            </div>`;
+    }
+
     function renderDashboard() {
         const counts = { learning: 0, in_progress: 0, mastered: 0 };
         state.students.forEach(s => counts[s.status]++);
@@ -2379,6 +2435,7 @@
         return `
             ${renderHeader(dashTitle,
                 `<button class="btn btn-primary btn-sm" id="continue-quiz">Continue Quiz</button>
+                 <button class="btn btn-outline btn-sm" id="show-gallery">Photo Grid</button>
                  <button class="btn btn-outline btn-sm" id="edit-class">Add / Edit Students</button>
                  <button class="btn btn-outline btn-sm" id="back-to-upload">New Class</button>`)}
             <div class="fade-in">
@@ -2613,6 +2670,40 @@
             btn.addEventListener('click', (e) => {
                 const key = e.target.dataset.key;
                 handleResume(key);
+            });
+        });
+
+        // Class photo grid
+        document.querySelectorAll('.open-gallery').forEach(el => {
+            el.addEventListener('click', () => {
+                if (loadClass(el.dataset.key)) {
+                    state.gallery = { names: 'show', sort: 'roster', size: (state.gallery && state.gallery.size) || 'medium', revealed: {} };
+                    state.screen = 'gallery';
+                    render();
+                }
+            });
+        });
+        const showGallery = document.getElementById('show-gallery');
+        if (showGallery) {
+            showGallery.addEventListener('click', () => {
+                state.gallery = { names: 'show', sort: 'roster', size: (state.gallery && state.gallery.size) || 'medium', revealed: {} };
+                state.screen = 'gallery';
+                render();
+            });
+        }
+        document.querySelectorAll('.seg button[data-grp]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.gallery[btn.dataset.grp] = btn.dataset.val;
+                if (btn.dataset.grp === 'names') state.gallery.revealed = {};
+                render();
+            });
+        });
+        document.querySelectorAll('.gallery-card').forEach(card => {
+            card.addEventListener('click', () => {
+                if (state.gallery.names !== 'hide') return;
+                const id = card.dataset.id;
+                state.gallery.revealed[id] = !state.gallery.revealed[id];
+                render();
             });
         });
 
