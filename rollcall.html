@@ -377,6 +377,14 @@
             font-size: 0.9rem;
         }
         .upload-input { display: none; }
+        .upload-divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 20px 0; color: var(--text-light); font-size: 0.85rem;
+        }
+        .upload-divider::before, .upload-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+        .upload-area.compact { padding: 32px 40px; }
 
         /* Processing Screen */
         .processing {
@@ -444,6 +452,23 @@
             transition: opacity 0.15s;
         }
         .review-card:hover .remove-btn { opacity: 1; }
+        .review-card .photo-wrap { position: relative; cursor: pointer; }
+        .review-card .photo-wrap .replace-hint {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.55); color: #fff; font-size: 0.75rem;
+            text-align: center; padding: 4px 0; opacity: 0; transition: opacity 0.15s;
+            pointer-events: none;
+        }
+        .review-card .photo-wrap:hover .replace-hint { opacity: 1; }
+        .add-photo-card {
+            border: 2px dashed var(--border); border-radius: var(--radius-sm);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 180px; cursor: pointer; color: var(--text-light);
+            background: #fafbfc; transition: all 0.2s; text-align: center; padding: 12px;
+        }
+        .add-photo-card:hover, .add-photo-card.dragover { border-color: var(--primary-light); background: #f0f5ff; }
+        .add-photo-card .plus { font-size: 2rem; line-height: 1; margin-bottom: 6px; }
+        .add-photo-card .label { font-size: 0.85rem; font-weight: 500; }
 
         /* Quiz Screen */
         .quiz-container { text-align: center; }
@@ -2119,8 +2144,8 @@
                         <div class="welcome-step">
                             <div class="step-number">1</div>
                             <div class="step-text">
-                                <h3>Upload a Class Roster PDF</h3>
-                                <p>Use a PDF with a grid of student photos and names beneath each photo (like those from your university's student information system). Works best with 4-across formatting (four photos per row).</p>
+                                <h3>Upload a Class Roster PDF or Student Photos</h3>
+                                <p>Use a PDF with a grid of student photos and names beneath each photo (like those from your university's student information system). Works best with 4-across formatting (four photos per row). Or upload individual photos of each student &mdash; name the files after the students and the names fill in automatically.</p>
                             </div>
                         </div>
                         <div class="welcome-step">
@@ -2167,6 +2192,16 @@
                     </p>
                     <input type="file" accept=".pdf" class="upload-input" id="file-input">
                 </div>
+                <div class="upload-divider">or</div>
+                <div class="upload-area compact" id="photo-upload-area">
+                    <div class="upload-icon">&#128247;</div>
+                    <h2>Upload Individual Student Photos</h2>
+                    <p>Drag and drop photos here, or click to browse &mdash; you can select many at once</p>
+                    <p style="margin-top:8px;font-size:0.8rem;color:var(--text-light);">
+                        Tip: name each file after the student (e.g., <em>Jane Smith.jpg</em>) and the name fills in automatically. You can edit names on the next screen.
+                    </p>
+                    <input type="file" accept="image/*" multiple class="upload-input" id="photo-input">
+                </div>
             </div>`;
     }
 
@@ -2197,10 +2232,10 @@
                 </div>
                 <p style="margin-bottom:12px;color:var(--text-light);">
                     Found <strong>${count}</strong> student${count !== 1 ? 's' : ''}.
-                    Hover over a card to remove incorrect entries. Click a name to edit it.
+                    Hover over a card to remove incorrect entries. Click a name to edit it. Click a photo to replace it, or use <strong>Add Students</strong> to add more photos.
                     The first round of name learning gives you multiple choice options of other names of the same gender from this class. When preferred pronouns are available on the roster, they are used to determine gender automatically. Otherwise, we attempt to auto-detect probable gender based on names — you can also indicate student gender below to facilitate name quizzing.
                 </p>
-                ${count === 0 ? `
+                ${count === 0 && state.uploadSource !== 'photos' ? `
                     <div class="error-box">
                         <p>No students were extracted from this PDF. The file might use a layout
                         that isn't supported yet. Try a different PDF or use one with a grid
@@ -2209,7 +2244,10 @@
                 <div class="review-grid">
                     ${state.students.map((s, i) => `
                         <div class="review-card" data-idx="${i}">
-                            <img src="${s.imageDataUrl}" alt="${s.name}">
+                            <div class="photo-wrap" data-idx="${i}" title="Click to replace photo">
+                                <img src="${s.imageDataUrl}" alt="${s.name}">
+                                <div class="replace-hint">Replace photo</div>
+                            </div>
                             <button class="remove-btn" data-idx="${i}" title="Remove">&times;</button>
                             <div class="name" data-idx="${i}" title="Click to edit">${s.name}</div>
                             ${s.pronouns ? `<div class="pronouns-label">${s.pronouns}</div>` : ''}
@@ -2220,7 +2258,14 @@
                             </div>
                         </div>
                     `).join('')}
+                    <div class="add-photo-card" id="add-photo-card" title="Add student photos">
+                        <div class="plus">+</div>
+                        <div class="label">Add Students</div>
+                        <div style="font-size:0.72rem;margin-top:4px;">Click or drop photos</div>
+                    </div>
                 </div>
+                <input type="file" accept="image/*" multiple class="upload-input" id="add-photo-input">
+                <input type="file" accept="image/*" class="upload-input" id="replace-photo-input">
                 ${count >= 2 ? `
                     <div style="text-align:center;margin-top:20px;">
                         <button class="btn btn-primary btn-success" id="start-quiz" style="padding:14px 40px;font-size:1.1rem;">
@@ -2228,7 +2273,7 @@
                         </button>
                     </div>` : count === 1 ? `
                     <div class="error-box" style="margin-top:16px;">
-                        <p>Need at least 2 students for the quiz. Try uploading a different PDF.</p>
+                        <p>Need at least 2 students for the quiz. Add more student photos above, or try a different PDF.</p>
                     </div>` : ''}
             </div>`;
     }
@@ -2486,6 +2531,59 @@
             fileInput.addEventListener('change', e => {
                 const file = e.target.files[0];
                 if (file) handleFileUpload(file);
+            });
+        }
+
+        // Individual photo upload (upload screen)
+        const photoArea = document.getElementById('photo-upload-area');
+        const photoInput = document.getElementById('photo-input');
+        if (photoArea && photoInput) {
+            photoArea.addEventListener('click', () => photoInput.click());
+            photoArea.addEventListener('dragover', e => { e.preventDefault(); photoArea.classList.add('dragover'); });
+            photoArea.addEventListener('dragleave', () => photoArea.classList.remove('dragover'));
+            photoArea.addEventListener('drop', e => {
+                e.preventDefault();
+                photoArea.classList.remove('dragover');
+                handlePhotoFiles(e.dataTransfer.files, false);
+            });
+            photoInput.addEventListener('change', e => handlePhotoFiles(e.target.files, false));
+        }
+
+        // Add more photos (review screen)
+        const addCard = document.getElementById('add-photo-card');
+        const addInput = document.getElementById('add-photo-input');
+        if (addCard && addInput) {
+            addCard.addEventListener('click', () => addInput.click());
+            addCard.addEventListener('dragover', e => { e.preventDefault(); addCard.classList.add('dragover'); });
+            addCard.addEventListener('dragleave', () => addCard.classList.remove('dragover'));
+            addCard.addEventListener('drop', e => {
+                e.preventDefault();
+                addCard.classList.remove('dragover');
+                handlePhotoFiles(e.dataTransfer.files, true);
+            });
+            addInput.addEventListener('change', e => handlePhotoFiles(e.target.files, true));
+        }
+
+        // Replace a single student's photo (review screen)
+        const replaceInput = document.getElementById('replace-photo-input');
+        if (replaceInput) {
+            document.querySelectorAll('.review-card .photo-wrap').forEach(el => {
+                el.addEventListener('click', () => {
+                    replaceInput.dataset.idx = el.dataset.idx;
+                    replaceInput.value = '';
+                    replaceInput.click();
+                });
+            });
+            replaceInput.addEventListener('change', async e => {
+                const file = e.target.files[0];
+                const idx = parseInt(replaceInput.dataset.idx);
+                if (!file || isNaN(idx) || !state.students[idx]) return;
+                try {
+                    state.students[idx].imageDataUrl = await imageFileToDataUrl(file);
+                    render();
+                } catch (err) {
+                    alert(`Couldn't read "${file.name}". Try saving it as a JPG or PNG first.`);
+                }
             });
         }
 
@@ -2837,6 +2935,7 @@
     // FILE HANDLING
     // ============================================================
     async function handleFileUpload(file) {
+        state.uploadSource = 'pdf';
         state.screen = 'processing';
         state.processingMessage = 'Loading PDF...';
         state.error = null;
@@ -2856,6 +2955,98 @@
             state.students = [];
         }
         render();
+    }
+
+    // ============================================================
+    // INDIVIDUAL PHOTO UPLOAD
+    // ============================================================
+    // Turns a file name like "smith_jane-2.jpg" or "Jane Smith.png" into a
+    // readable default name. The user can edit it on the review screen.
+    function nameFromFilename(fileName) {
+        let n = fileName.replace(/\.[^.]+$/, '')      // extension
+                        .replace(/[_\-.]+/g, ' ')       // separators
+                        .replace(/\(\d+\)|\b\d+\b/g, ' ') // copy numbers / IDs
+                        .replace(/\s+/g, ' ').trim();
+        if (!n || /^(img|image|photo|dsc|pxl|screenshot)\b/i.test(n)) return 'New Student';
+        // "Smith, Jane" -> "Jane Smith"
+        if (/,/.test(fileName) && n.split(' ').length >= 2) {
+            const parts = fileName.replace(/\.[^.]+$/, '').split(',');
+            if (parts.length === 2) n = (parts[1].trim() + ' ' + parts[0].trim()).replace(/[_\-]+/g, ' ');
+        }
+        return n.split(' ').map(w =>
+            w === w.toLowerCase() || w === w.toUpperCase() ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w
+        ).join(' ');
+    }
+
+    // Loads an image file and shrinks it so a whole class fits in browser storage.
+    function imageFileToDataUrl(file, maxSide = 400) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+                const w = Math.max(1, Math.round(img.naturalWidth * scale));
+                const h = Math.max(1, Math.round(img.naturalHeight * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(url);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Unreadable image')); };
+            img.src = url;
+        });
+    }
+
+    async function handlePhotoFiles(fileList, append) {
+        const files = Array.from(fileList || []).filter(f =>
+            (f.type && f.type.startsWith('image/')) || /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(f.name));
+        if (files.length === 0) return;
+
+        const existing = append ? state.students : [];
+        if (!append) {
+            state.className = '';
+            state.detectedClassName = '';
+            state.uploadSource = 'photos';
+        }
+        state.screen = 'processing';
+        state.error = null;
+
+        const added = [];
+        const failed = [];
+        for (let i = 0; i < files.length; i++) {
+            state.processingMessage = `Loading photo ${i + 1} of ${files.length}...`;
+            render();
+            try {
+                const imageDataUrl = await imageFileToDataUrl(files[i]);
+                const name = nameFromFilename(files[i].name);
+                added.push({
+                    id: Math.random().toString(36).substring(2, 9),
+                    name,
+                    pronouns: null,
+                    gender: guessGender(name),
+                    imageDataUrl,
+                    status: 'learning',
+                    mcCorrect: 0,
+                    frCorrect: 0,
+                    totalAttempts: 0,
+                    lastSeen: 0,
+                });
+            } catch (err) {
+                failed.push(files[i].name);
+            }
+        }
+
+        state.students = existing.concat(added);
+        state.screen = 'review';
+        render();
+        if (failed.length) {
+            alert(`Couldn't read ${failed.length} photo${failed.length > 1 ? 's' : ''}: ${failed.join(', ')}\n\n` +
+                  `Try saving ${failed.length > 1 ? 'them' : 'it'} as JPG or PNG first.`);
+        }
     }
 
     function handleResume(key) {
