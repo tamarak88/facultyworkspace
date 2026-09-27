@@ -2105,6 +2105,7 @@
                             </div>
                             <span style="font-size:0.75rem;color:var(--text-light);min-width:32px;">${pct}%</span>
                             <button class="btn btn-sm btn-primary resume-btn" data-key="${c.key}">Resume</button>
+                            <button class="btn btn-sm btn-outline edit-class-btn" data-key="${c.key}" title="Add or edit students">Edit</button>
                             <button class="delete-class-btn" data-key="${c.key}" title="Delete this class">&times;</button>
                         </div>
                     </div>`;
@@ -2219,8 +2220,9 @@
         const count = state.students.length;
         const nameVal = state.className || state.detectedClassName || '';
         return `
-            ${renderHeader('Review Extracted Students',
-                `<button class="btn btn-outline" id="back-to-upload">Upload Different</button>`)}
+            ${state.editingClass
+                ? renderHeader('Add / Edit Students', `<button class="btn btn-outline" id="cancel-edit">Cancel</button>`)
+                : renderHeader('Review Extracted Students', `<button class="btn btn-outline" id="back-to-upload">Upload Different</button>`)}
             <div class="card fade-in">
                 <div class="class-name-section">
                     <label for="class-name-input">Class Name</label>
@@ -2231,11 +2233,11 @@
                     <div class="class-name-hint">Give this class a name so you can find it later when you return.</div>
                 </div>
                 <p style="margin-bottom:12px;color:var(--text-light);">
-                    Found <strong>${count}</strong> student${count !== 1 ? 's' : ''}.
+                    ${state.editingClass ? `This class has <strong>${count}</strong> student${count !== 1 ? 's' : ''}. Progress is kept for existing students; new students start fresh.` : `Found <strong>${count}</strong> student${count !== 1 ? 's' : ''}.`}
                     Hover over a card to remove incorrect entries. Click a name to edit it. Click a photo to replace it, or use <strong>Add Students</strong> to add more photos.
                     The first round of name learning gives you multiple choice options of other names of the same gender from this class. When preferred pronouns are available on the roster, they are used to determine gender automatically. Otherwise, we attempt to auto-detect probable gender based on names — you can also indicate student gender below to facilitate name quizzing.
                 </p>
-                ${count === 0 && state.uploadSource !== 'photos' ? `
+                ${count === 0 && state.uploadSource !== 'photos' && !state.editingClass ? `
                     <div class="error-box">
                         <p>No students were extracted from this PDF. The file might use a layout
                         that isn't supported yet. Try a different PDF or use one with a grid
@@ -2269,7 +2271,7 @@
                 ${count >= 2 ? `
                     <div style="text-align:center;margin-top:20px;">
                         <button class="btn btn-primary btn-success" id="start-quiz" style="padding:14px 40px;font-size:1.1rem;">
-                            Start Learning Names
+                            ${state.editingClass ? 'Save Changes' : 'Start Learning Names'}
                         </button>
                     </div>` : count === 1 ? `
                     <div class="error-box" style="margin-top:16px;">
@@ -2377,6 +2379,7 @@
         return `
             ${renderHeader(dashTitle,
                 `<button class="btn btn-primary btn-sm" id="continue-quiz">Continue Quiz</button>
+                 <button class="btn btn-outline btn-sm" id="edit-class">Add / Edit Students</button>
                  <button class="btn btn-outline btn-sm" id="back-to-upload">New Class</button>`)}
             <div class="fade-in">
                 ${allMastered ? `
@@ -2613,6 +2616,26 @@
             });
         });
 
+        // Add / Edit students in an existing class
+        document.querySelectorAll('#edit-class').forEach(btn => {
+            btn.addEventListener('click', () => enterEditMode());
+        });
+        document.querySelectorAll('.edit-class-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (loadClass(e.target.dataset.key)) enterEditMode();
+            });
+        });
+        const cancelEdit = document.getElementById('cancel-edit');
+        if (cancelEdit) {
+            cancelEdit.addEventListener('click', () => {
+                state.editingClass = false;
+                loadClass(state.classId);  // discard unsaved edits
+                state.screen = 'dashboard';
+                render();
+            });
+        }
+
         // Delete class buttons
         document.querySelectorAll('.delete-class-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -2698,6 +2721,14 @@
                 const classNameInput = document.getElementById('class-name-input');
                 if (classNameInput) {
                     state.className = classNameInput.value.trim();
+                }
+                if (state.editingClass) {
+                    // Keep the same saved class (and everyone's progress).
+                    state.editingClass = false;
+                    saveProgress();
+                    state.screen = 'dashboard';
+                    render();
+                    return;
                 }
                 state.classId = simpleHash(state.students.map(s => s.name).sort().join('|'));
                 const saved = loadProgress(state.classId);
@@ -2936,6 +2967,7 @@
     // ============================================================
     async function handleFileUpload(file) {
         state.uploadSource = 'pdf';
+        state.editingClass = false;
         state.screen = 'processing';
         state.processingMessage = 'Loading PDF...';
         state.error = null;
@@ -3011,6 +3043,7 @@
             state.className = '';
             state.detectedClassName = '';
             state.uploadSource = 'photos';
+            state.editingClass = false;
         }
         state.screen = 'processing';
         state.error = null;
@@ -3049,7 +3082,29 @@
         }
     }
 
+    function loadClass(key) {
+        const saved = loadProgress(key);
+        if (!saved || !saved.students) return false;
+        state.students = saved.students.map(s => ({
+            ...s,
+            pronouns: s.pronouns || null,
+            gender: s.gender || guessGender(s.name),
+        }));
+        state.classId = key;
+        state.className = saved.className || '';
+        return true;
+    }
+
+    function enterEditMode() {
+        if (!state.classId) return;
+        state.editingClass = true;
+        state.students = state.students.map(s => ({ ...s }));
+        state.screen = 'review';
+        render();
+    }
+
     function handleResume(key) {
+        state.editingClass = false;
         const saved = loadProgress(key);
         if (saved && saved.students) {
             state.students = saved.students.map(s => ({
