@@ -2383,8 +2383,21 @@
             </div>`;
     }
 
+    // Photo grid view preferences (remembered in this browser)
+    const GALLERY_PREFS_KEY = 'rc_gallery_prefs';
+    function loadGalleryPrefs() {
+        try { return JSON.parse(localStorage.getItem(GALLERY_PREFS_KEY)) || {}; } catch (e) { return {}; }
+    }
+    function saveGalleryPrefs(g) {
+        try { localStorage.setItem(GALLERY_PREFS_KEY, JSON.stringify({ size: g.size, progress: g.progress })); } catch (e) {}
+    }
+    function newGalleryState() {
+        const p = loadGalleryPrefs();
+        return { names: 'show', sort: 'roster', size: p.size || 'medium', progress: p.progress || 'show', revealed: {} };
+    }
+
     function renderGallery() {
-        const g = state.gallery || (state.gallery = { names: 'show', sort: 'roster', size: 'medium', revealed: {} });
+        const g = state.gallery || (state.gallery = newGalleryState());
         const list = [...state.students];
         if (g.sort === 'first') list.sort((a, b) => a.name.localeCompare(b.name));
         if (g.sort === 'last') {
@@ -2395,6 +2408,7 @@
         const sizes = { small: '120px', medium: '170px', large: '240px' };
         const segBtn = (grp, val, label) => `<button class="${g[grp] === val ? 'on' : ''}" data-grp="${grp}" data-val="${val}">${label}</button>`;
         const title = state.className || 'Class Photos';
+        const showProgress = g.progress !== 'hide';
         return `
             ${renderHeader(title,
                 `<button class="btn btn-primary btn-sm" id="continue-quiz">Practice Names</button>
@@ -2403,6 +2417,7 @@
             <div class="fade-in">
                 <div class="gallery-toolbar">
                     <span class="count">${list.length} student${list.length !== 1 ? 's' : ''}</span>
+                    <div class="seg" title="Roster only shows just photos and names">${segBtn('progress', 'show', 'With progress')}${segBtn('progress', 'hide', 'Roster only')}</div>
                     <div class="seg" title="Hide names to test yourself">${segBtn('names', 'show', 'Show names')}${segBtn('names', 'hide', 'Hide names')}</div>
                     <div class="seg">${segBtn('sort', 'roster', 'Roster order')}${segBtn('sort', 'first', 'First name')}${segBtn('sort', 'last', 'Last name')}</div>
                     <div class="seg">${segBtn('size', 'small', 'S')}${segBtn('size', 'medium', 'M')}${segBtn('size', 'large', 'L')}</div>
@@ -2413,7 +2428,7 @@
                         return `<div class="gallery-card" data-id="${s.id}" title="${g.names === 'hide' ? 'Click to reveal name' : ''}">
                             <img src="${s.imageDataUrl}" alt="${show ? s.name : 'Student photo'}">
                             <div class="gname ${show ? '' : 'hidden-name'}">${show ? s.name : 'Click to reveal'}
-                                ${show ? `<span class="gstatus">${statusLabel[s.status] || ''}</span>` : ''}</div>
+                                ${show && showProgress ? `<span class="gstatus">${statusLabel[s.status] || ''}</span>` : ''}</div>
                         </div>`;
                     }).join('')}
                 </div>
@@ -2677,7 +2692,7 @@
         document.querySelectorAll('.open-gallery').forEach(el => {
             el.addEventListener('click', () => {
                 if (loadClass(el.dataset.key)) {
-                    state.gallery = { names: 'show', sort: 'roster', size: (state.gallery && state.gallery.size) || 'medium', revealed: {} };
+                    state.gallery = newGalleryState();
                     state.screen = 'gallery';
                     render();
                 }
@@ -2686,7 +2701,7 @@
         const showGallery = document.getElementById('show-gallery');
         if (showGallery) {
             showGallery.addEventListener('click', () => {
-                state.gallery = { names: 'show', sort: 'roster', size: (state.gallery && state.gallery.size) || 'medium', revealed: {} };
+                state.gallery = newGalleryState();
                 state.screen = 'gallery';
                 render();
             });
@@ -2695,6 +2710,7 @@
             btn.addEventListener('click', () => {
                 state.gallery[btn.dataset.grp] = btn.dataset.val;
                 if (btn.dataset.grp === 'names') state.gallery.revealed = {};
+                if (btn.dataset.grp === 'progress' || btn.dataset.grp === 'size') saveGalleryPrefs(state.gallery);
                 render();
             });
         });
