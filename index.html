@@ -2987,6 +2987,24 @@ init();
 .wr-icon:hover { color: var(--ink); background: #eef2f7; }
 .wr-icon.del:hover { color: #dc2626; background: #fef2f2; }
 .wr-icon.has-note { background: #eef2ff; box-shadow: inset 0 0 0 1px #c7d2fe; }
+.wr-expand { font-size: 11px; font-weight: 600; color: var(--muted); background: #f1f5f9; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.wr-expand:hover { border-color: #c7d2fe; color: var(--ink); }
+.wr-expand.open { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.wr-expand.all-done { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.wr-subs { padding: 4px 12px 12px 58px; background: #fbfcff; border-bottom: 1px solid var(--line); }
+.wr-sub-hd { font-size: 11px; color: var(--muted); margin: 4px 0 6px; display: flex; gap: 10px; flex-wrap: wrap; }
+.wr-sub-hd b { color: var(--ink); font-weight: 600; }
+.wr-sub-list { list-style: none; padding: 0; margin: 0; }
+.wr-sub { display: flex; align-items: center; gap: 6px; padding: 2px 0; border-left: 2px solid #e0e7ff; padding-left: 8px; }
+.wr-sub .wr-part-in { font-size: 13px; padding: 4px 6px; }
+.wr-sub.s-done .wr-part-in { color: var(--muted); text-decoration: line-through; text-decoration-color: #cbd5e1; }
+.wr-sstat { font-size: 10.5px; font-weight: 600; border-radius: 999px; padding: 2px 9px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; min-width: 84px; text-align: center; }
+.wr-sstat.prog { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.wr-sstat.done { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+.wr-sub-add { display: flex; gap: 6px; margin-top: 6px; }
+.wr-sub-add input { flex: 1; font-size: 13px; padding: 6px 9px; border: 1px dashed #c7d2fe; border-radius: 7px; font-family: inherit; background: #fff; }
+.wr-sub-add input:focus { outline: none; border-style: solid; border-color: var(--accent); }
+.wr-sub-add .btn { font-size: 12px; }
 .wr-note { padding: 0 10px 10px 66px; background: #fff; border-bottom: 1px solid var(--line); }
 .wr-note textarea { width: 100%; min-height: 54px; font-size: 13px; line-height: 1.45; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-family: inherit; resize: vertical; background: #f8fafc; color: var(--ink); }
 .wr-note textarea:focus { outline: none; border-color: var(--accent); }
@@ -3027,6 +3045,8 @@ function wrId() { return Math.random().toString(36).slice(2, 10); }
 function wrEsc(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function wrActive() { return wr.projects.find(p => p.id === wr.activeId) || null; }
 function wrPart(pid) { const p = wrActive(); return p ? p.parts.find(x => x.id === pid) : null; }
+function wrSubUnit(p) { return (p.subUnit || (String(p.unit || "").toLowerCase() === "section" ? "Subsection" : "Section")); }
+function wrSub(pid, sid) { const x = wrPart(pid); return x && x.subs ? x.subs.find(s => s.id === sid) : null; }
 function wrPlural(unit, n) {
   const u = (unit || "part").trim().toLowerCase();
   if (n === 1) return u;
@@ -3081,23 +3101,46 @@ function renderWriting() {
   const pct = total ? Math.round(doneN / total * 100) : 0;
   const numOf = {}; p.parts.forEach((x, i) => numOf[x.id] = i + 1);
 
+  const subUnit = wrSubUnit(p);
+  const subL2 = wrPlural(subUnit, 2);
   const row = (x) => {
     const isDone = x.status === "done";
     const statusBtn = isDone
       ? `<span class="wr-status done">Finished</span>`
       : `<button class="wr-status ${x.status === "progress" ? "prog" : ""}" onclick="wrToggleProgress('${x.id}')" title="Click to switch between Not started and In progress">${x.status === "progress" ? "In progress" : "Not started"}</button>`;
     const noteOpen = !!wrOpenNotes[x.id];
+    const subs = x.subs || [];
+    const sDone = subs.filter(s => s.status === "done").length;
+    const sProg = subs.filter(s => s.status === "progress").length;
+    const expandBtn = `<button class="wr-expand ${x.open ? "open" : ""} ${subs.length && sDone === subs.length && !x.open ? "all-done" : ""}" onclick="wrToggleSubs('${x.id}')" title="${x.open ? "Hide" : "Show"} ${wrEsc(subL2)}">${x.open ? "▾" : "▸"} ${subs.length ? `${sDone}/${subs.length} ${wrEsc(wrPlural(subUnit, subs.length))}` : `+ ${wrEsc(subL2)}`}</button>`;
+    const sLabel = { todo: "Not started", progress: "In progress", done: "Done" };
+    const subsBlock = !x.open ? "" : `<li class="wr-subs">
+        ${subs.length ? `<div class="wr-sub-hd"><span><b>${sDone}</b> done</span><span><b>${sProg}</b> in progress</span><span><b>${subs.length - sDone - sProg}</b> not started</span><span style="margin-left:auto">Click a status to change it</span></div>` : ""}
+        <ul class="wr-sub-list">${subs.map(s => `<li class="wr-sub ${s.status === "done" ? "s-done" : ""}">
+            <button class="wr-sstat ${s.status === "progress" ? "prog" : s.status === "done" ? "done" : ""}" onclick="wrSubCycle('${x.id}','${s.id}')" title="Click to change: Not started → In progress → Done">${sLabel[s.status] || "Not started"}</button>
+            <input class="wr-part-in" value="${wrEsc(s.title)}" placeholder="${wrEsc(subUnit)} name" oninput="wrSubRename('${x.id}','${s.id}', this.value)">
+            <button class="wr-icon" onclick="wrSubMove('${x.id}','${s.id}',-1)" title="Move up">▲</button>
+            <button class="wr-icon" onclick="wrSubMove('${x.id}','${s.id}',1)" title="Move down">▼</button>
+            <button class="wr-icon del" onclick="wrSubDelete('${x.id}','${s.id}')" title="Delete">✕</button>
+          </li>`).join("")}</ul>
+        <div class="wr-sub-add">
+          <input id="wr-sub-in-${x.id}" placeholder="+ Add a ${wrEsc(subUnit.toLowerCase())} to this ${wrEsc(unit.toLowerCase())} (press Enter)" onkeydown="if(event.key==='Enter')wrAddSub('${x.id}')">
+          <button class="btn" onclick="wrAddSub('${x.id}')">Add</button>
+        </div>
+      </li>`;
     return `<li class="wr-row ${isDone ? "is-done" : ""}">
         <input type="checkbox" ${isDone ? "checked" : ""} onchange="wrSetDone('${x.id}', this.checked)" title="${isDone ? "Move back to To complete" : "Mark finished"}">
         <span class="wr-num">${numOf[x.id]}.</span>
         <input class="wr-part-in" value="${wrEsc(x.title)}" placeholder="${wrEsc(unit)} name" oninput="wrRename('${x.id}', this.value)">
+        ${expandBtn}
         ${statusBtn}
         <button class="wr-icon ${x.note ? "has-note" : ""}" onclick="wrToggleNote('${x.id}')" title="${x.note ? "View note" : "Add a note"}">📝</button>
         <button class="wr-icon" onclick="wrMove('${x.id}',-1)" title="Move up">▲</button>
         <button class="wr-icon" onclick="wrMove('${x.id}',1)" title="Move down">▼</button>
         <button class="wr-icon del" onclick="wrDeletePart('${x.id}')" title="Delete">✕</button>
       </li>
-      ${noteOpen ? `<li class="wr-note"><textarea placeholder="Notes, next steps, word goal…" oninput="wrSetNote('${x.id}', this.value)">${wrEsc(x.note || "")}</textarea></li>` : ""}`;
+      ${noteOpen ? `<li class="wr-note"><textarea placeholder="Notes, next steps, word goal…" oninput="wrSetNote('${x.id}', this.value)">${wrEsc(x.note || "")}</textarea></li>` : ""}
+      ${subsBlock}`;
   };
 
   const todo = p.parts.filter(x => x.status !== "done");
@@ -3110,6 +3153,8 @@ function renderWriting() {
       <div class="wr-meta">
         <span>Parts are called</span>
         <input class="wr-unit-in" value="${wrEsc(unit)}" onchange="wrSetUnit(this.value)" title="e.g., Chapter, Section, Heading">
+        <span style="margin-left:8px">and the pieces inside each ${wrEsc(unit.toLowerCase())} are called</span>
+        <input class="wr-unit-in" value="${wrEsc(subUnit)}" onchange="wrSetSubUnit(this.value)" title="e.g., Section, Subsection, Heading">
       </div>
 
       <div class="wr-progress">
@@ -3197,6 +3242,35 @@ function wrMove(id, dir) {
   while (j >= 0 && j < p.parts.length && (p.parts[j].status === "done") !== group) j += dir;
   if (j < 0 || j >= p.parts.length) return;
   [p.parts[i], p.parts[j]] = [p.parts[j], p.parts[i]];
+  wrSave(); renderWriting();
+}
+function wrSetSubUnit(v) { const p = wrActive(); if (p) { p.subUnit = v.trim() || "Section"; wrSave(); renderWriting(); } }
+function wrToggleSubs(id) { const x = wrPart(id); if (!x) return; x.open = !x.open; wrSave(); renderWriting();
+  if (x.open && !(x.subs || []).length) setTimeout(() => { const i = document.getElementById("wr-sub-in-" + id); if (i) i.focus(); }, 0); }
+function wrAddSub(id) {
+  const x = wrPart(id); const inp = document.getElementById("wr-sub-in-" + id); if (!x || !inp) return;
+  const title = inp.value.trim(); if (!title) { inp.focus(); return; }
+  (x.subs = x.subs || []).push({ id: wrId(), title, status: "todo" });
+  wrSave(); renderWriting();
+  setTimeout(() => { const i = document.getElementById("wr-sub-in-" + id); if (i) i.focus(); }, 0);
+}
+function wrSubRename(pid, sid, v) { const s = wrSub(pid, sid); if (s) { s.title = v; wrSave(); } }
+function wrSubCycle(pid, sid) {
+  const s = wrSub(pid, sid); if (!s) return;
+  s.status = s.status === "todo" || !s.status ? "progress" : s.status === "progress" ? "done" : "todo";
+  wrSave(); renderWriting();
+}
+function wrSubMove(pid, sid, dir) {
+  const x = wrPart(pid); if (!x || !x.subs) return;
+  const i = x.subs.findIndex(s => s.id === sid), j = i + dir;
+  if (i < 0 || j < 0 || j >= x.subs.length) return;
+  [x.subs[i], x.subs[j]] = [x.subs[j], x.subs[i]];
+  wrSave(); renderWriting();
+}
+function wrSubDelete(pid, sid) {
+  const x = wrPart(pid); const s = wrSub(pid, sid); if (!x || !s) return;
+  if (!confirm(`Delete "${s.title || "this item"}"?`)) return;
+  x.subs = x.subs.filter(y => y.id !== sid);
   wrSave(); renderWriting();
 }
 function wrDeletePart(id) {
