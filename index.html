@@ -218,6 +218,10 @@ body { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI"
 .dv-launch-wrap { text-align: center; margin-top: 32px; padding-top: 24px; border-top: 2px solid #1a1a1a; }
 .dv-launch-btn { font-family: 'Times New Roman',serif; font-size: 1rem; letter-spacing: .12em; text-transform: uppercase; background: #1a1a1a; color: #f1f5f9; border: none; padding: 12px 40px; cursor: pointer; }
 .dv-launch-btn:hover { background: #333; }
+.dv-goto-wrap { text-align: center; margin-bottom: 18px; }
+.dv-goto-btn { font-family: Georgia,serif; font-size: .9rem; letter-spacing: .06em; background: #2563eb; color: #fff; border: none; padding: 10px 26px; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+.dv-goto-btn:hover { background: #1d4ed8; }
+.dv-goto-link { font-family: Georgia,serif; font-size: .8rem; background: none; border: none; color: #2563eb; text-decoration: underline; cursor: pointer; }
 .dv-launch-error { color: #900; font-size: .78rem; margin-top: 10px; font-style: italic; }
 .dv-favorites-header { background: #1a1a1a; color: #f1f5f9; padding: 8px 24px; font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 6px; scroll-margin-top: 120px; }
 .dv-favorites-clear { font-family: Georgia,serif; font-size: .68rem; background: transparent; color: #ccc; border: 1px solid #666; padding: 2px 10px; cursor: pointer; }
@@ -643,6 +647,7 @@ details.book-overview > div { padding:6px 0; font-size:13px; line-height:1.5; }
     <div class="dv-body">
       <div id="dv-settings-page" class="dv-settings-page">
         <div class="dv-settings-intro">
+          <div class="dv-goto-wrap" style="display:none"><button class="dv-goto-btn" onclick="dgShowDigest()">Go to My Journals →</button></div>
           <h2>Set Up Your Digest</h2>
           <p>Add the journals you follow and keyword topics you want to track. Your settings are saved in this browser — return to this page anytime via the ⚙&nbsp;Settings button.</p>
         </div>
@@ -663,7 +668,8 @@ details.book-overview > div { padding:6px 0; font-size:13px; line-height:1.5; }
           <p style="font-size:.72rem;color:#666;font-style:italic;margin-top:4px">Keyword topics sweep all journals for recent articles matching your search terms.</p>
         </div>
         <div class="dv-launch-wrap">
-          <button class="dv-launch-btn" onclick="dgSaveAndLaunch()">Launch My Digest →</button>
+          <button class="dv-launch-btn" onclick="dgSaveAndLaunch()">Save &amp; Launch My Digest →</button>
+          <div class="dv-goto-wrap" style="display:none;margin-top:12px"><button class="dv-goto-link" onclick="dgShowDigest()">or go to My Journals without saving changes</button></div>
           <div class="dv-launch-error" id="dv-launch-error" style="display:none"></div>
         </div>
       </div>
@@ -1085,6 +1091,7 @@ function switchTab(tab) {
   if (tab === "todo")        renderTodo();
   if (tab === "ra")          renderRA();
   if (tab === "plans")       renderPlanView();
+  if (tab === "digest")      dgOpen();
   if (tab === "writing" && typeof renderWriting === "function") renderWriting();
 }
 
@@ -1921,9 +1928,22 @@ function dgShowSettings() {
   document.getElementById('dv-controls').style.display='none';
   document.getElementById('dv-section-nav').style.display='none';
   document.getElementById('dv-sub-left').textContent='Configure your personal journal watchlist';
+  const hasCfg=!!(cfg&&((cfg.sections&&cfg.sections.length)||(cfg.keywords&&cfg.keywords.length)));
+  document.querySelectorAll('.dv-goto-wrap').forEach(el=>el.style.display=hasCfg?'':'none');
+  dgDigestShown=false;
   document.getElementById('dv-datestamp').textContent='—';
 }
+// Opening the Digest tab: go straight to your journals if the digest is set up,
+// otherwise show the setup page. Articles load once, not on every tab switch.
+let dgDigestShown=false;
+function dgOpen() {
+  const cfg=dgLoadConfig();
+  const hasCfg=!!(cfg&&((cfg.sections&&cfg.sections.length)||(cfg.keywords&&cfg.keywords.length)));
+  if(!hasCfg){dgShowSettings();return;}
+  if(!dgDigestShown)dgShowDigest();
+}
 function dgShowDigest() {
+  dgDigestShown=true;
   document.getElementById('dv-settings-page').style.display='none';
   document.getElementById('dv-digest-content').style.display='';
   document.getElementById('dv-footer').style.display='';
@@ -2010,9 +2030,7 @@ function init() {
   else if (activeTab === "supervising") renderSupervising();
   else if (activeTab === "todo")   renderTodo();
   else if (activeTab === "digest") {
-    const cfg = dgLoadConfig();
-    if (!cfg || (!cfg.sections?.length && !cfg.keywords?.length)) dgShowSettings();
-    else dgShowDigest();
+    dgOpen();
   }
   // Always pre-render the first visible tab
   if (activeTab !== "research") renderResearch();
